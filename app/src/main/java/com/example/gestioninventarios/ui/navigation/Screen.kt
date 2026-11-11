@@ -12,4 +12,6 @@ sealed class Screen(val route: String) {
     object Scanner : Screen("scanner")
     object Reportes : Screen("reportes")
     object Usuarios : Screen("usuarios")
+    object Ajustes : Screen("ajustes")
+    object AjustesAvanzados : Screen("ajustes_avanzados")
 }

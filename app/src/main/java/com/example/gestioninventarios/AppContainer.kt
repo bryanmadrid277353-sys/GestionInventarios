@@ -2,6 +2,7 @@ package com.example.gestioninventarios
 
 import android.content.Context
 import com.example.gestioninventarios.data.local.AppDatabase
+import com.example.gestioninventarios.data.local.PreferenciasManager
 import com.example.gestioninventarios.data.local.TokenStore
 import com.example.gestioninventarios.data.repository.AuthRepository
 import com.example.gestioninventarios.data.repository.CategoriaRepository
@@ -10,9 +11,18 @@ import com.example.gestioninventarios.data.repository.ProveedorRepository
 import com.example.gestioninventarios.data.repository.ReporteRepository
 import com.example.gestioninventarios.data.repository.UsuarioRepository
 import com.example.gestioninventarios.data.repository.VentaRepository
+import com.example.gestioninventarios.util.AlmacenRespaldos
 import com.example.gestioninventarios.util.SesionManager
 
 class AppContainer(private val context: Context) {
+
+    val preferenciasManager: PreferenciasManager by lazy {
+        PreferenciasManager(context)
+    }
+
+    val almacenRespaldos: AlmacenRespaldos by lazy {
+        AlmacenRespaldos(context)
+    }
 
     val tokenStore: TokenStore by lazy {
         TokenStore(context)

@@ -12,6 +12,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.gestioninventarios.AppContainer
 import com.example.gestioninventarios.ui.ViewModelFactory
+import com.example.gestioninventarios.ui.ajustes.AjustesAvanzadosScreen
+import com.example.gestioninventarios.ui.ajustes.AjustesAvanzadosViewModel
+import com.example.gestioninventarios.ui.ajustes.AjustesScreen
+import com.example.gestioninventarios.ui.ajustes.AjustesViewModel
 import com.example.gestioninventarios.ui.catalogos.CatalogosScreen
 import com.example.gestioninventarios.ui.catalogos.CatalogosViewModel
 import com.example.gestioninventarios.ui.home.HomeScreen
@@ -75,6 +79,7 @@ fun NavGraph(
                 onNavigateToCatalogos = { navController.navigate(Screen.Catalogos.route) },
                 onNavigateToReportes = { navController.navigate(Screen.Reportes.route) },
                 onNavigateToUsuarios = { navController.navigate(Screen.Usuarios.route) },
+                onNavigateToAjustes = { navController.navigate(Screen.Ajustes.route) },
                 onLogoutSuccess = {
                     loginViewModel.resetForm()
                     navController.navigate(Screen.Login.route) {
@@ -176,6 +181,23 @@ fun NavGraph(
             val usuariosViewModel: UsuariosViewModel = viewModel(factory = factory)
             UsuariosScreen(
                 viewModel = usuariosViewModel,
+                onNavigateBack = { navController.navigateUp() }
+            )
+        }
+
+        composable(Screen.Ajustes.route) {
+            val ajustesViewModel: AjustesViewModel = viewModel(factory = factory)
+            AjustesScreen(
+                viewModel = ajustesViewModel,
+                onNavigateToAjustesAvanzados = { navController.navigate(Screen.AjustesAvanzados.route) },
+                onNavigateBack = { navController.navigateUp() }
+            )
+        }
+
+        composable(Screen.AjustesAvanzados.route) {
+            val avancesViewModel: AjustesAvanzadosViewModel = viewModel(factory = factory)
+            AjustesAvanzadosScreen(
+                viewModel = avancesViewModel,
                 onNavigateBack = { navController.navigateUp() }
             )
         }

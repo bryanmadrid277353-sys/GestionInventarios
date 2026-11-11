@@ -21,6 +21,12 @@ interface VentaDao {
     @Query("SELECT * FROM ventas ORDER BY fechaVenta DESC")
     fun getVentasWithDetalles(): List<VentaWithDetalles>
 
+    @Query("SELECT * FROM ventas ORDER BY id ASC")
+    fun getAllVentas(): List<VentaEntity>
+
+    @Query("SELECT * FROM detalle_ventas ORDER BY id ASC")
+    fun getAllDetalles(): List<DetalleVentaEntity>
+
     @Transaction
     @Query("SELECT * FROM ventas WHERE id = :id LIMIT 1")
     fun getVentaWithDetallesById(id: Int): VentaWithDetalles?

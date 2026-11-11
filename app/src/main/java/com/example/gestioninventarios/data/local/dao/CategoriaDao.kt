@@ -12,6 +12,9 @@ interface CategoriaDao {
     @Query("SELECT * FROM categorias WHERE activo = 1 ORDER BY nombre ASC")
     fun getCategorias(): List<CategoriaEntity>
 
+    @Query("SELECT * FROM categorias ORDER BY id ASC")
+    fun getAllCategorias(): List<CategoriaEntity>
+
     @Query("SELECT * FROM categorias WHERE id = :id LIMIT 1")
     fun getCategoriaById(id: Int): CategoriaEntity?
 

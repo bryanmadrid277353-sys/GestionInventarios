@@ -12,6 +12,9 @@ interface ProductoDao {
     @Query("SELECT * FROM productos WHERE activo = 1 ORDER BY nombre ASC")
     fun getProductos(): List<ProductoEntity>
 
+    @Query("SELECT * FROM productos ORDER BY id ASC")
+    fun getAllProductos(): List<ProductoEntity>
+
     @Query("SELECT * FROM productos WHERE id = :id LIMIT 1")
     fun getProductoById(id: Int): ProductoEntity?
 

@@ -3,6 +3,8 @@ package com.example.gestioninventarios.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.gestioninventarios.AppContainer
+import com.example.gestioninventarios.ui.ajustes.AjustesAvanzadosViewModel
+import com.example.gestioninventarios.ui.ajustes.AjustesViewModel
 import com.example.gestioninventarios.ui.catalogos.CatalogosViewModel
 import com.example.gestioninventarios.ui.home.HomeViewModel
 import com.example.gestioninventarios.ui.login.LoginViewModel
@@ -71,6 +73,20 @@ class ViewModelFactory(
                 UsuariosViewModel(
                     appContainer.usuarioRepository,
                     appContainer.authRepository
+                ) as T
+            }
+            modelClass.isAssignableFrom(AjustesViewModel::class.java) -> {
+                AjustesViewModel(
+                    appContainer.preferenciasManager,
+                    appContainer.tokenStore
+                ) as T
+            }
+            modelClass.isAssignableFrom(AjustesAvanzadosViewModel::class.java) -> {
+                AjustesAvanzadosViewModel(
+                    appContainer.appDatabase,
+                    appContainer.preferenciasManager,
+                    appContainer.almacenRespaldos,
+                    appContainer.tokenStore
                 ) as T
             }
             else -> throw IllegalArgumentException("ViewModel desconocida: ${modelClass.name}")

@@ -128,12 +128,16 @@ abstract class AppDatabase : RoomDatabase() {
                 .build()
 
                 INSTANCE = instance
-                seedInitialData(instance)
+                seedInitialData(instance, context.applicationContext)
                 instance
             }
         }
 
-        private fun seedInitialData(db: AppDatabase) {
+        private fun seedInitialData(db: AppDatabase, context: Context) {
+            val prefManager = PreferenciasManager(context)
+            if (prefManager.isDatosSembrados()) {
+                return
+            }
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val usrDao = db.usuarioDao()
@@ -224,6 +228,7 @@ abstract class AppDatabase : RoomDatabase() {
                             )
                         )
                     }
+                    prefManager.setDatosSembrados(true)
                 } catch (ignored: Exception) {
                 }
             }

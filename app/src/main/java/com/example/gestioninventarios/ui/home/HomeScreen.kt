@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -81,6 +82,7 @@ fun HomeScreen(
     onNavigateToCatalogos: () -> Unit = {},
     onNavigateToReportes: () -> Unit = {},
     onNavigateToUsuarios: () -> Unit = {},
+    onNavigateToAjustes: () -> Unit = {},
     onLogoutSuccess: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -98,7 +100,8 @@ fun HomeScreen(
         onNavigateToProductos = onNavigateToProductos,
         onNavigateToCatalogos = onNavigateToCatalogos,
         onNavigateToReportes = onNavigateToReportes,
-        onNavigateToUsuarios = onNavigateToUsuarios
+        onNavigateToUsuarios = onNavigateToUsuarios,
+        onNavigateToAjustes = onNavigateToAjustes
     )
 
     if (uiState.showLogoutConfirmDialog) {
@@ -122,7 +125,8 @@ fun HomeScreenContent(
     onNavigateToProductos: () -> Unit = {},
     onNavigateToCatalogos: () -> Unit = {},
     onNavigateToReportes: () -> Unit = {},
-    onNavigateToUsuarios: () -> Unit = {}
+    onNavigateToUsuarios: () -> Unit = {},
+    onNavigateToAjustes: () -> Unit = {}
 ) {
     val isAdmin = uiState.userRole == "ADMIN"
     val scheme = MaterialTheme.colorScheme
@@ -147,6 +151,12 @@ fun HomeScreenContent(
             AppTopBar(
                 titulo = "Inventario PyME",
                 acciones = {
+                    IconButton(onClick = onNavigateToAjustes) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Ajustes"
+                        )
+                    }
                     IconButton(onClick = onPromptLogout) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
