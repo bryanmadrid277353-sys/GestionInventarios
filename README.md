@@ -218,12 +218,47 @@ erDiagram
     VENTAS ||--|{ DETALLE_VENTA : contiene
     PRODUCTOS ||--o{ DETALLE_VENTA : "se vende en"
 
-    USUARIOS { long id PK; string nombre; string email; string passwordHash; string rol }
-    CATEGORIAS { long id PK; string nombre; int codigo }
-    PROVEEDORES { long id PK; string nombre; string telefono; string email; int codigo }
-    PRODUCTOS { long id PK; string codigoBarras; string nombre; double precio; double costo; int stock; int stockMinimo }
-    VENTAS { long id PK; long fecha; double total; long usuarioId FK }
-    DETALLE_VENTA { long id PK; long ventaId FK; long productoId FK; int cantidad; double precioUnitario }
+    USUARIOS {
+        long id PK
+        string nombre
+        string email
+        string passwordHash
+        string rol
+    }
+    CATEGORIAS {
+        long id PK
+        string nombre
+        int codigo
+    }
+    PROVEEDORES {
+        long id PK
+        string nombre
+        string telefono
+        string email
+        int codigo
+    }
+    PRODUCTOS {
+        long id PK
+        string codigoBarras
+        string nombre
+        double precio
+        double costo
+        int stock
+        int stockMinimo
+    }
+    VENTAS {
+        long id PK
+        long fecha
+        double total
+        long usuarioId FK
+    }
+    DETALLE_VENTA {
+        long id PK
+        long ventaId FK
+        long productoId FK
+        int cantidad
+        double precioUnitario
+    }
 ```
 
 ---
