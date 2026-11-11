@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Tapa y caja -->
+    <path android:fillColor="#E0F2FE" android:pathData="M32,30H76A3,3 0 0 1 79,33V40A3,3 0 0 1 76,43H32A3,3 0 0 1 29,40V33A3,3 0 0 1 32,30Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M32,45H76V75A4,4 0 0 1 72,79H36A4,4 0 0 1 32,75Z" />
+    <!-- Código de barras -->
+    <path android:fillColor="#0B4F6C" android:pathData="M38,52h2.5v20h-2.5zM42.5,52h1.5v20h-1.5zM45.5,52h3v20h-3zM50.5,52h1.5v20h-1.5zM53.5,52h2.5v20h-2.5zM57.5,52h1.5v20h-1.5zM60.5,52h3v20h-3zM65.5,52h1.5v20h-1.5zM68,52h2v20h-2z" />
+    <!-- Rayo del escáner -->
+    <path android:fillColor="#22D3EE" android:pathData="M31.25,60h46.5a1.25,1.25 0 0 1 0,2.5h-46.5a1.25,1.25 0 0 1 0,-2.5Z" />
+</vector>
