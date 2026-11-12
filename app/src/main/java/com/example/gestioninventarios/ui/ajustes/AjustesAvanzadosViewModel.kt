@@ -24,8 +24,11 @@ import com.example.gestioninventarios.util.RespaldoResultado
 import com.example.gestioninventarios.util.RespaldoResultadoImportacion
 import com.example.gestioninventarios.util.RespaldoValidacionInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -41,8 +44,7 @@ data class AjustesAvanzadosUiState(
     val mensajeFaseProgreso: String? = null,
     val ultimoRespaldoFecha: String = "",
     val ultimoRespaldoUbicacion: String = "",
-    val estadoAcceso: EstadoPermisoAcceso = EstadoPermisoAcceso.FALTA,
-    val mostrarSnackbarAccesoConcedido: Boolean = false,
+    val estadoAcceso: EstadoPermisoAcceso? = null,
 
     val mensajeExitoExportacion: RespaldoResultado? = null,
     val errorHumano: ErrorHumano? = null,
@@ -76,26 +78,33 @@ class AjustesAvanzadosViewModel(
     )
     val uiState: StateFlow<AjustesAvanzadosUiState> = _uiState.asStateFlow()
 
+    private val _eventoSnackbarAccesoConcedido = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val eventoSnackbarAccesoConcedido: SharedFlow<Unit> = _eventoSnackbarAccesoConcedido.asSharedFlow()
+
+    private var esperandoRetornoDeAjustes: Boolean = false
+
     init {
         verificarRolAdmin()
+    }
+
+    fun marcarEsperandoRetornoDeAjustes() {
+        esperandoRetornoDeAjustes = true
     }
 
     fun reevaluarEstadoAlmacenamiento(context: Context) {
         val nuevoEstado = EstadoAccesoArchivos.evaluarEstado(context)
         val estadoAnterior = _uiState.value.estadoAcceso
 
-        val cambioAConcedido = (estadoAnterior == EstadoPermisoAcceso.FALTA && nuevoEstado == EstadoPermisoAcceso.CONCEDIDO)
+        if (estadoAnterior != null) {
+            if (esperandoRetornoDeAjustes && estadoAnterior == EstadoPermisoAcceso.FALTA && nuevoEstado == EstadoPermisoAcceso.CONCEDIDO) {
+                _eventoSnackbarAccesoConcedido.tryEmit(Unit)
+            }
+            esperandoRetornoDeAjustes = false
+        }
 
         _uiState.update {
-            it.copy(
-                estadoAcceso = nuevoEstado,
-                mostrarSnackbarAccesoConcedido = cambioAConcedido || it.mostrarSnackbarAccesoConcedido
-            )
+            it.copy(estadoAcceso = nuevoEstado)
         }
-    }
-
-    fun consumirSnackbarAccesoConcedido() {
-        _uiState.update { it.copy(mostrarSnackbarAccesoConcedido = false) }
     }
 
     private fun verificarRolAdmin() {
@@ -109,6 +118,23 @@ class AjustesAvanzadosViewModel(
     private suspend fun esAdminActivo(): Boolean {
         val role = tokenStore.userRole.first()
         return role == "ADMIN"
+    }
+
+    private fun comprobarAccesoOTirarError(): Boolean {
+        if (_uiState.value.estadoAcceso != EstadoPermisoAcceso.CONCEDIDO) {
+            _uiState.update {
+                it.copy(
+                    cargando = false,
+                    mensajeFaseProgreso = null,
+                    errorHumano = ErrorHumano(
+                        mensajeSimple = "Sin el permiso de acceso a archivos no se pueden crear ni importar respaldos. Actívalo para proteger tu información.",
+                        detalleTecnico = "PermissionException: estadoAcceso is FALTA"
+                    )
+                )
+            }
+            return false
+        }
+        return true
     }
 
     // ================= 1. EXPORTACIÓN =================
@@ -126,6 +152,8 @@ class AjustesAvanzadosViewModel(
                 }
                 return@launch
             }
+
+            if (!comprobarAccesoOTirarError()) return@launch
 
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Exportando respaldo de datos...") }
 
@@ -200,9 +228,10 @@ class AjustesAvanzadosViewModel(
     // ================= 2. IMPORTACIÓN =================
 
     fun solicitarImportacion() {
-        if (REQUERIR_ACCESO_PARA_IMPORTAR && _uiState.value.estadoAcceso == EstadoPermisoAcceso.FALTA) {
+        if (_uiState.value.estadoAcceso != EstadoPermisoAcceso.CONCEDIDO) {
             _uiState.update { it.copy(mostrarDialogoFaltaAccesoImportar = true) }
         } else {
+            almacenRespaldos.asegurarCarpetaExiste(AlmacenRespaldos.CARPETA_RESPALDOS)
             _uiState.update { it.copy(mostrarAvisoImportar = true) }
         }
     }
@@ -229,17 +258,7 @@ class AjustesAvanzadosViewModel(
                 return@launch
             }
 
-            if (REQUERIR_ACCESO_PARA_IMPORTAR && _uiState.value.estadoAcceso == EstadoPermisoAcceso.FALTA) {
-                _uiState.update {
-                    it.copy(
-                        errorHumano = ErrorHumano(
-                            mensajeSimple = "Para importar un respaldo es necesario activar el acceso a archivos del dispositivo.",
-                            detalleTecnico = "PermissionException: REQUERIR_ACCESO_PARA_IMPORTAR is true and estadoAcceso is FALTA"
-                        )
-                    )
-                }
-                return@launch
-            }
+            if (!comprobarAccesoOTirarError()) return@launch
 
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Validando archivo de respaldo...") }
 
@@ -299,24 +318,25 @@ class AjustesAvanzadosViewModel(
                 return@launch
             }
 
-            if (REQUERIR_ACCESO_PARA_IMPORTAR && _uiState.value.estadoAcceso == EstadoPermisoAcceso.FALTA) {
-                _uiState.update {
-                    it.copy(
-                        errorHumano = ErrorHumano(
-                            mensajeSimple = "Para importar un respaldo es necesario activar el acceso a archivos del dispositivo.",
-                            detalleTecnico = "PermissionException: REQUERIR_ACCESO_PARA_IMPORTAR is true and estadoAcceso is FALTA"
-                        )
-                    )
-                }
-                return@launch
-            }
+            if (!comprobarAccesoOTirarError()) return@launch
 
-            _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Generando respaldo previo de seguridad...") }
+            _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Generando respaldo previo a la importación...") }
 
-            // Respaldo previo automático obligatorio
+            // Generar marca de tiempo única para el par previo y posterior
+            val marcaTiempo = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
+
+            var rutaPrevio = ""
+            var rutaPosterior = ""
+
+            // 1. Respaldo previo automático obligatorio en "Previo a Importar"
             try {
                 val jsonPrevio = generarJsonRespaldoActual()
-                val resPrevio = almacenRespaldos.guardarRespaldoJson(jsonPrevio, "InventarioPYME_previo-a-importar")
+                val resPrevio = almacenRespaldos.guardarRespaldoJson(
+                    jsonContenido = jsonPrevio,
+                    prefijoNombre = "InventarioPYME_previo-a-importar",
+                    subcarpeta = AlmacenRespaldos.CARPETA_PREVIO_IMPORTAR,
+                    marcaTiempo = marcaTiempo
+                )
                 if (resPrevio.isFailure) {
                     val ex = resPrevio.exceptionOrNull() ?: IllegalStateException("Error al crear respaldo previo")
                     _uiState.update {
@@ -328,6 +348,7 @@ class AjustesAvanzadosViewModel(
                     }
                     return@launch
                 }
+                rutaPrevio = resPrevio.getOrThrow().rutaLegible
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -341,6 +362,7 @@ class AjustesAvanzadosViewModel(
 
             _uiState.update { it.copy(mensajeFaseProgreso = "Importando registros en base de datos...") }
 
+            // 2. Transacción de importación
             try {
                 val root = JSONObject(jsonStr)
                 val catArray = root.getJSONArray("categorias")
@@ -380,7 +402,7 @@ class AjustesAvanzadosViewModel(
                     val mapProdId = mutableMapOf<Int, Int>()
                     val mapVtaId = mutableMapOf<Int, Int>()
 
-                    // 1. Categorías
+                    // Categorías
                     for (i in 0 until catArray.length()) {
                         val item = catArray.getJSONObject(i)
                         val oldId = item.getInt("id")
@@ -407,7 +429,7 @@ class AjustesAvanzadosViewModel(
                         mapCatId[oldId] = newId
                     }
 
-                    // 2. Proveedores
+                    // Proveedores
                     for (i in 0 until provArray.length()) {
                         val item = provArray.getJSONObject(i)
                         val oldId = item.getInt("id")
@@ -438,7 +460,7 @@ class AjustesAvanzadosViewModel(
                         mapProvId[oldId] = newId
                     }
 
-                    // 3. Usuarios
+                    // Usuarios
                     for (i in 0 until usrArray.length()) {
                         val item = usrArray.getJSONObject(i)
                         val oldId = item.getInt("id")
@@ -467,7 +489,7 @@ class AjustesAvanzadosViewModel(
                         mapUserId[oldId] = newId
                     }
 
-                    // 4. Productos
+                    // Productos
                     for (i in 0 until prodArray.length()) {
                         val item = prodArray.getJSONObject(i)
                         val oldId = item.getInt("id")
@@ -517,7 +539,7 @@ class AjustesAvanzadosViewModel(
                         mapProdId[oldId] = newId
                     }
 
-                    // 5. Ventas
+                    // Ventas
                     val currentAdminId = tokenStore.userId.first() ?: 1
                     for (i in 0 until vtaArray.length()) {
                         val item = vtaArray.getJSONObject(i)
@@ -541,7 +563,7 @@ class AjustesAvanzadosViewModel(
                         mapVtaId[oldId] = newVtaId
                     }
 
-                    // 6. Detalle Ventas
+                    // Detalle Ventas
                     val listaDetalles = mutableListOf<DetalleVentaEntity>()
                     for (i in 0 until detArray.length()) {
                         val item = detArray.getJSONObject(i)
@@ -577,6 +599,25 @@ class AjustesAvanzadosViewModel(
                     }
                 }
 
+                // 3. Respaldo posterior automático en "Previo a Importar"
+                _uiState.update { it.copy(mensajeFaseProgreso = "Generando respaldo posterior a la importación...") }
+                try {
+                    val jsonPosterior = generarJsonRespaldoActual()
+                    val resPosterior = almacenRespaldos.guardarRespaldoJson(
+                        jsonContenido = jsonPosterior,
+                        prefijoNombre = "InventarioPYME_posterior-a-importar",
+                        subcarpeta = AlmacenRespaldos.CARPETA_PREVIO_IMPORTAR,
+                        marcaTiempo = marcaTiempo
+                    )
+                    if (resPosterior.isSuccess) {
+                        rutaPosterior = resPosterior.getOrThrow().rutaLegible
+                    } else {
+                        rutaPosterior = "No se pudo crear el respaldo posterior: ${resPosterior.exceptionOrNull()?.message}"
+                    }
+                } catch (e: Exception) {
+                    rutaPosterior = "No se pudo crear el respaldo posterior: ${e.localizedMessage}"
+                }
+
                 _uiState.update {
                     it.copy(
                         cargando = false,
@@ -591,7 +632,9 @@ class AjustesAvanzadosViewModel(
                             productosImportados = prodArray.length(),
                             productosRenombrados = renamedProd,
                             ventasImportadas = vtaArray.length(),
-                            detallesImportados = detArray.length()
+                            detallesImportados = detArray.length(),
+                            rutaRespaldoPrevio = rutaPrevio,
+                            rutaRespaldoPosterior = rutaPosterior
                         )
                     )
                 }
@@ -615,7 +658,11 @@ class AjustesAvanzadosViewModel(
     // ================= 3. ELIMINAR TODOS LOS DATOS =================
 
     fun solicitarEliminacion() {
-        _uiState.update { it.copy(mostrarConfirmarEliminar = true) }
+        if (_uiState.value.estadoAcceso != EstadoPermisoAcceso.CONCEDIDO) {
+            _uiState.update { it.copy(mostrarDialogoFaltaAccesoImportar = true) }
+        } else {
+            _uiState.update { it.copy(mostrarConfirmarEliminar = true) }
+        }
     }
 
     fun dismissConfirmarEliminar() {
@@ -638,9 +685,11 @@ class AjustesAvanzadosViewModel(
                 return@launch
             }
 
+            if (!comprobarAccesoOTirarError()) return@launch
+
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Generando respaldo previo de seguridad...") }
 
-            // Respaldo previo automático obligatorio (funciona aunque no haya acceso por la cadena de almacenamiento)
+            // Respaldo previo automático obligatorio en la carpeta de respaldos principal
             var resPrevioRuta = ""
             try {
                 val jsonPrevio = generarJsonRespaldoActual()

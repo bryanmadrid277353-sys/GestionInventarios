@@ -44,7 +44,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -67,10 +66,13 @@ import com.example.gestioninventarios.ui.components.AppScaffold
 import com.example.gestioninventarios.ui.components.AppTopBar
 import com.example.gestioninventarios.ui.theme.Semantico
 import com.example.gestioninventarios.util.EstadoPermisoAcceso
+import com.example.gestioninventarios.util.OpenDocumentInBackupFolderContract
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+const val SEGUNDOS_CONFIRMACION_ELIMINAR = 3
 
 @Composable
 fun AjustesAvanzadosScreen(
@@ -91,9 +93,9 @@ fun AjustesAvanzadosScreen(
         viewModel.reevaluarEstadoAlmacenamiento(context)
     }
 
-    // Launcher para seleccionar archivo JSON
+    // Launcher personalizado que abre directamente la carpeta de respaldos a partir de API 26
     val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = OpenDocumentInBackupFolderContract()
     ) { uri: Uri? ->
         uri?.let {
             try {
@@ -102,7 +104,7 @@ fun AjustesAvanzadosScreen(
                 if (!jsonStr.isNullOrEmpty()) {
                     viewModel.procesarArchivoSeleccionado(jsonStr)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Manejado en ViewModel
             }
         }
@@ -121,15 +123,15 @@ fun AjustesAvanzadosScreen(
         }
     }
 
-    // Mostrar Snackbar cuando cambia de FALTA a CONCEDIDO
-    LaunchedEffect(uiState.mostrarSnackbarAccesoConcedido) {
-        if (uiState.mostrarSnackbarAccesoConcedido) {
+    // Escuchar evento de Snackbar único cuando se concede el permiso
+    LaunchedEffect(Unit) {
+        viewModel.eventoSnackbarAccesoConcedido.collect {
             snackbarHostState.showSnackbar("Acceso a archivos concedido")
-            viewModel.consumirSnackbarAccesoConcedido()
         }
     }
 
     fun solicitarConcederAcceso() {
+        viewModel.marcarEsperandoRetornoDeAjustes()
         if (Build.VERSION.SDK_INT >= 30) {
             mostrarPasosPermisoDialog = true
         } else {
@@ -145,10 +147,10 @@ fun AjustesAvanzadosScreen(
                     data = Uri.parse("package:${context.packageName}")
                 }
                 context.startActivity(intent)
-            } catch (e: ActivityNotFoundException) {
+            } catch (_: ActivityNotFoundException) {
                 val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
                 context.startActivity(intent)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
                 context.startActivity(intent)
             }
@@ -231,6 +233,8 @@ fun AjustesAvanzadosScreenContent(
     onDismissError: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    val esConcedido = (uiState.estadoAcceso == EstadoPermisoAcceso.CONCEDIDO)
+
     AppScaffold(
         topBar = {
             AppTopBar(
@@ -269,7 +273,7 @@ fun AjustesAvanzadosScreenContent(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Backup,
+                                imageVector = if (esConcedido) Icons.Default.Backup else Icons.Default.Lock,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -303,11 +307,14 @@ fun AjustesAvanzadosScreenContent(
                         }
 
                         Button(
-                            onClick = onExportar,
+                            onClick = if (esConcedido) onExportar else onSolicitarConcederAcceso,
                             enabled = !uiState.cargando,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Backup, contentDescription = null)
+                            Icon(
+                                imageVector = if (esConcedido) Icons.Default.Backup else Icons.Default.Lock,
+                                contentDescription = null
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Exportar respaldo ahora")
                         }
@@ -326,7 +333,7 @@ fun AjustesAvanzadosScreenContent(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Publish,
+                                imageVector = if (esConcedido) Icons.Default.Publish else Icons.Default.Lock,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -351,7 +358,7 @@ fun AjustesAvanzadosScreenContent(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                imageVector = if (uiState.estadoAcceso == EstadoPermisoAcceso.FALTA) Icons.Default.Lock else Icons.Default.Publish,
+                                imageVector = if (esConcedido) Icons.Default.Publish else Icons.Default.Lock,
                                 contentDescription = null
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -373,7 +380,7 @@ fun AjustesAvanzadosScreenContent(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.Warning,
+                                imageVector = if (esConcedido) Icons.Default.Warning else Icons.Default.Lock,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -394,7 +401,7 @@ fun AjustesAvanzadosScreenContent(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Button(
-                            onClick = onSolicitarEliminar,
+                            onClick = if (esConcedido) onSolicitarEliminar else onSolicitarConcederAcceso,
                             enabled = !uiState.cargando,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
@@ -402,7 +409,10 @@ fun AjustesAvanzadosScreenContent(
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.DeleteForever, contentDescription = null)
+                            Icon(
+                                imageVector = if (esConcedido) Icons.Default.DeleteForever else Icons.Default.Lock,
+                                contentDescription = null
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Eliminar todos los datos")
                         }
@@ -450,22 +460,6 @@ fun AjustesAvanzadosScreenContent(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    if (!res.accesoCompleto) {
-                        Text(
-                            text = "Nota: Se guardó en la carpeta de Documentos. Concede el acceso a archivos si deseas guardar directo en la carpeta principal 'Inventario PYME'.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    if (res.estrategiaUsada == "APP_PRIVATE_EXTERNAL") {
-                        Text(
-                            text = "Aviso: Se guardó en la carpeta privada de la app. Este archivo se eliminará si desinstalas la aplicación.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
                     Text(
                         text = "Este archivo contiene datos del negocio y usuarios con contraseñas cifradas. Guárdalo en un lugar seguro.",
                         style = MaterialTheme.typography.bodySmall,
@@ -514,10 +508,25 @@ fun AjustesAvanzadosScreenContent(
             onDismissRequest = onDismissAvisoImportar,
             title = { Text("Importante antes de importar", fontWeight = FontWeight.Bold) },
             text = {
-                Text(
-                    text = "Los registros del archivo se agregarán como NUEVOS, por encima de los existentes. No se modificará ni se eliminará ningún dato actual. Si el archivo contiene datos que ya tienes, verás registros repetidos (las ventas repetidas se sumarán dos veces en los reportes). Los usuarios importados llegan desactivados. Antes de importar se guardará automáticamente un respaldo de tus datos actuales. Consejo: para restaurar en una instalación limpia, usa primero 'Eliminar todos los datos'.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column {
+                    Text(
+                        text = "Los registros del archivo se agregarán como NUEVOS, por encima de los existentes. No se modificará ni se eliminará ningún dato actual. Si el archivo contiene datos que ya tienes, verás registros repetidos (las ventas repetidas se sumarán dos veces en los reportes). Los usuarios importados llegan desactivados.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Se guardarán dos copias automáticas en 'Respaldos de Datos › Previo a Importar' (una del estado previo y otra del posterior).",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Consejo: para restaurar en una instalación limpia, usa primero 'Eliminar todos los datos'.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             },
             confirmButton = {
                 Button(onClick = onConfirmarAbrirDocumento) {
@@ -553,6 +562,12 @@ fun AjustesAvanzadosScreenContent(
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Se crearán respaldos automático previo y posterior en 'Respaldos de Datos › Previo a Importar'.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             },
             confirmButton = {
@@ -576,12 +591,19 @@ fun AjustesAvanzadosScreenContent(
             text = {
                 Column {
                     Text("Se agregaron exitosamente los siguientes registros:")
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text("• Categorías: ${res.categoriasImportadas} (${res.categoriasRenombradas} renombradas)")
                     Text("• Proveedores: ${res.proveedoresImportados} (${res.proveedoresRenombrados} renombrados)")
                     Text("• Productos: ${res.productosImportados} (${res.productosRenombrados} renombrados)")
                     Text("• Ventas: ${res.ventasImportadas} (${res.detallesImportados} detalles)")
                     Text("• Usuarios: ${res.usuariosImportados} (desactivados por seguridad)")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    if (res.rutaRespaldoPrevio.isNotEmpty()) {
+                        Text("Respaldo previo: ${res.rutaRespaldoPrevio}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    }
+                    if (res.rutaRespaldoPosterior.isNotEmpty()) {
+                        Text("Respaldo posterior: ${res.rutaRespaldoPosterior}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             confirmButton = {
@@ -592,9 +614,9 @@ fun AjustesAvanzadosScreenContent(
         )
     }
 
-    // G) Diálogo Confirmar Eliminación con Temporizador de 5 Segundos
+    // G) Diálogo Confirmar Eliminación con Temporizador de 3 Segundos
     if (uiState.mostrarConfirmarEliminar) {
-        var contador by remember { mutableIntStateOf(5) }
+        var contador by remember { mutableIntStateOf(SEGUNDOS_CONFIRMACION_ELIMINAR) }
 
         LaunchedEffect(Unit) {
             while (contador > 0) {
@@ -718,7 +740,7 @@ fun AjustesAvanzadosScreenContent(
 
 @Composable
 fun TarjetaEstadoAccesoArchivos(
-    estadoAcceso: EstadoPermisoAcceso,
+    estadoAcceso: EstadoPermisoAcceso?,
     onConcederAcceso: () -> Unit
 ) {
     val esConcedido = (estadoAcceso == EstadoPermisoAcceso.CONCEDIDO)
@@ -755,7 +777,7 @@ fun TarjetaEstadoAccesoArchivos(
                 text = if (esConcedido) {
                     "Los respaldos se guardan en Inventario PYME › Respaldos de Datos, en la carpeta principal del teléfono."
                 } else {
-                    "Sin este permiso la app no puede guardar en la carpeta principal ni importar respaldos. Exportar sí funciona: el archivo se guarda en Documentos › Inventario PYME › Respaldos de Datos."
+                    "Sin este permiso no se pueden crear respaldos ni importar o eliminar datos. Actívalo para proteger tu información."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.9f)

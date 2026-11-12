@@ -1,14 +1,8 @@
 package com.example.gestioninventarios.util
 
-import android.content.ContentValues
 import android.content.Context
-import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
-import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
-import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -26,91 +20,72 @@ data class RespaldoResultado(
 class AlmacenRespaldos(private val context: Context) {
 
     companion object {
-        const val CARPETA_RAIZ_NOMBRE = "Inventario PYME"
-        const val CARPETA_SUB_NOMBRE = "Respaldos de Datos"
-        const val RUTA_RELATIVA_DOCUMENTOS = "Documents/$CARPETA_RAIZ_NOMBRE/$CARPETA_SUB_NOMBRE/"
-        const val RUTA_RELATIVA_DESCARGAS = "Download/$CARPETA_RAIZ_NOMBRE/$CARPETA_SUB_NOMBRE/"
+        const val CARPETA_APP = "Inventario PYME"
+        const val CARPETA_RESPALDOS = "Respaldos de Datos"
+        const val CARPETA_PREVIO_IMPORTAR = "Previo a Importar"
 
-        fun generarNombreArchivo(prefijo: String = "InventarioPYME"): String {
-            val sdf = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT)
-            val fecha = sdf.format(Date())
+        fun generarNombreArchivo(prefijo: String = "InventarioPYME", marcaTiempo: String? = null): String {
+            val fecha = marcaTiempo ?: SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
             return "${prefijo}_$fecha.json"
         }
     }
 
     /**
-     * Devuelve verdadero si se cuenta con permiso total para escribir en la carpeta raíz externa.
+     * Devuelve verdadero si el acceso a todos los archivos está CONCEDIDO.
      */
     fun tieneAccesoCompleto(): Boolean {
-        return when {
-            Build.VERSION.SDK_INT >= 30 -> {
-                Environment.isExternalStorageManager()
+        return EstadoAccesoArchivos.evaluarEstado(context) == EstadoPermisoAcceso.CONCEDIDO
+    }
+
+    /**
+     * Garantiza que la carpeta de respaldos (y subcarpetas) exista en la raíz del almacenamiento.
+     */
+    fun asegurarCarpetaExiste(subcarpeta: String? = null): Boolean {
+        if (!tieneAccesoCompleto()) return false
+        return try {
+            val dirRaiz = Environment.getExternalStorageDirectory()
+            val carpetaBase = File(dirRaiz, "$CARPETA_APP/$CARPETA_RESPALDOS")
+            val carpetaDestino = if (!subcarpeta.isNullOrEmpty()) {
+                File(carpetaBase, subcarpeta)
+            } else {
+                carpetaBase
             }
-            else -> {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            }
+            if (!carpetaDestino.exists()) {
+                carpetaDestino.mkdirs()
+            } else true
+        } catch (_: Exception) {
+            false
         }
     }
 
     /**
-     * Guarda el JSON de respaldo intentando secuencialmente las 4 estrategias.
+     * Guarda el JSON de respaldo ÚNICAMENTE en la carpeta raíz del dispositivo si el permiso está CONCEDIDO.
      */
     fun guardarRespaldoJson(
         jsonContenido: String,
-        prefijoNombre: String = "InventarioPYME"
+        prefijoNombre: String = "InventarioPYME",
+        subcarpeta: String? = null,
+        marcaTiempo: String? = null
     ): Result<RespaldoResultado> {
-        val nombreArchivo = generarNombreArchivo(prefijoNombre)
-
-        // Estrategia 1: Carpeta Raíz con File API (Si se cuenta con acceso completo)
-        if (tieneAccesoCompleto()) {
-            val res1 = guardarEnCarpetaRaizDirecta(nombreArchivo, jsonContenido)
-            if (res1.isSuccess) {
-                return res1
-            }
+        if (!tieneAccesoCompleto()) {
+            return Result.failure(IllegalStateException("No se puede crear el respaldo porque falta el permiso de acceso a archivos del dispositivo."))
         }
 
-        // Estrategia 2: MediaStore.Files en "Documents/Inventario PYME/Respaldos de Datos/"
-        val res2 = guardarEnMediaStore(
-            nombreArchivo = nombreArchivo,
-            jsonContenido = jsonContenido,
-            relativePath = RUTA_RELATIVA_DOCUMENTOS,
-            etiquetaRuta = "Documentos > $CARPETA_RAIZ_NOMBRE > $CARPETA_SUB_NOMBRE > $nombreArchivo",
-            estrategiaClave = "MEDIA_STORE_DOCUMENTS"
-        )
-        if (res2.isSuccess) {
-            return res2
-        }
+        val nombreArchivo = generarNombreArchivo(prefijoNombre, marcaTiempo)
 
-        // Estrategia 3: MediaStore.Downloads en "Download/Inventario PYME/Respaldos de Datos/"
-        val res3 = guardarEnMediaStore(
-            nombreArchivo = nombreArchivo,
-            jsonContenido = jsonContenido,
-            relativePath = RUTA_RELATIVA_DESCARGAS,
-            etiquetaRuta = "Descargas > $CARPETA_RAIZ_NOMBRE > $CARPETA_SUB_NOMBRE > $nombreArchivo",
-            estrategiaClave = "MEDIA_STORE_DOWNLOADS"
-        )
-        if (res3.isSuccess) {
-            return res3
-        }
-
-        // Estrategia 4 (Garantizada): Almacenamiento privado de la app (getExternalFilesDir)
-        return guardarEnAlmacenamientoPrivadoApp(nombreArchivo, jsonContenido)
-    }
-
-    private fun guardarEnCarpetaRaizDirecta(
-        nombreArchivo: String,
-        jsonContenido: String
-    ): Result<RespaldoResultado> {
         return try {
             val dirRaiz = Environment.getExternalStorageDirectory()
-            val carpetaDestino = File(dirRaiz, "$CARPETA_RAIZ_NOMBRE/$CARPETA_SUB_NOMBRE")
+            val carpetaBase = File(dirRaiz, "$CARPETA_APP/$CARPETA_RESPALDOS")
+            val carpetaDestino = if (!subcarpeta.isNullOrEmpty()) {
+                File(carpetaBase, subcarpeta)
+            } else {
+                carpetaBase
+            }
+
             if (!carpetaDestino.exists()) {
                 val ok = carpetaDestino.mkdirs()
                 if (!ok && !carpetaDestino.exists()) {
-                    return Result.failure(IllegalStateException("No se pudo crear la carpeta raíz en $CARPETA_RAIZ_NOMBRE"))
+                    return Result.failure(IllegalStateException("No se pudo crear la carpeta de respaldos en el almacenamiento del teléfono."))
                 }
             }
 
@@ -140,7 +115,9 @@ class AlmacenRespaldos(private val context: Context) {
                     null
                 )
 
-                val rutaLegible = "Almacenamiento principal > $CARPETA_RAIZ_NOMBRE > $CARPETA_SUB_NOMBRE > $nombreArchivo"
+                val subRutaTexto = if (!subcarpeta.isNullOrEmpty()) " > $subcarpeta" else ""
+                val rutaLegible = "Almacenamiento principal > $CARPETA_APP > $CARPETA_RESPALDOS$subRutaTexto > $nombreArchivo"
+
                 Result.success(
                     RespaldoResultado(
                         nombreArchivo = nombreArchivo,
@@ -156,102 +133,6 @@ class AlmacenRespaldos(private val context: Context) {
                 }
                 Result.failure(e)
             }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    private fun guardarEnMediaStore(
-        nombreArchivo: String,
-        jsonContenido: String,
-        relativePath: String,
-        etiquetaRuta: String,
-        estrategiaClave: String
-    ): Result<RespaldoResultado> {
-        if (Build.VERSION.SDK_INT < 29) {
-            return Result.failure(IllegalStateException("MediaStore Scoped Storage requiere API 29+"))
-        }
-
-        val resolver = context.contentResolver
-
-        // Selección rigurosa de colección según el relativePath
-        val collection = if (relativePath.startsWith("Download/")) {
-            MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        } else {
-            MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        }
-
-        val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, nombreArchivo)
-            put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-            put(MediaStore.MediaColumns.IS_PENDING, 1)
-        }
-
-        var uriResult: Uri? = null
-        return try {
-            uriResult = resolver.insert(collection, values)
-                ?: return Result.failure(IllegalStateException("No se pudo crear la entrada en MediaStore"))
-
-            resolver.openOutputStream(uriResult)?.use { out ->
-                out.write(jsonContenido.toByteArray(Charsets.UTF_8))
-                out.flush()
-            } ?: run {
-                resolver.delete(uriResult, null, null)
-                return Result.failure(IllegalStateException("No se pudo abrir el stream de salida"))
-            }
-
-            values.clear()
-            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
-            resolver.update(uriResult, values, null, null)
-
-            Result.success(
-                RespaldoResultado(
-                    nombreArchivo = nombreArchivo,
-                    rutaLegible = etiquetaRuta,
-                    uriStr = uriResult.toString(),
-                    estrategiaUsada = estrategiaClave,
-                    accesoCompleto = false
-                )
-            )
-        } catch (e: Exception) {
-            uriResult?.let { uri ->
-                try {
-                    resolver.delete(uri, null, null)
-                } catch (_: Exception) {}
-            }
-            Result.failure(e)
-        }
-    }
-
-    private fun guardarEnAlmacenamientoPrivadoApp(
-        nombreArchivo: String,
-        jsonContenido: String
-    ): Result<RespaldoResultado> {
-        return try {
-            val dirPrivado = context.getExternalFilesDir(CARPETA_SUB_NOMBRE)
-                ?: context.filesDir
-
-            if (!dirPrivado.exists()) {
-                dirPrivado.mkdirs()
-            }
-
-            val archivoFinal = File(dirPrivado, nombreArchivo)
-            FileOutputStream(archivoFinal).use { out ->
-                out.write(jsonContenido.toByteArray(Charsets.UTF_8))
-                out.flush()
-            }
-
-            val rutaLegible = "Carpeta privada de la app > $CARPETA_SUB_NOMBRE > $nombreArchivo"
-            Result.success(
-                RespaldoResultado(
-                    nombreArchivo = nombreArchivo,
-                    rutaLegible = rutaLegible,
-                    uriStr = archivoFinal.absolutePath,
-                    estrategiaUsada = "APP_PRIVATE_EXTERNAL",
-                    accesoCompleto = false
-                )
-            )
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -38,7 +38,9 @@ data class RespaldoResultadoImportacion(
     val productosImportados: Int,
     val productosRenombrados: Int,
     val ventasImportadas: Int,
-    val detallesImportados: Int
+    val detallesImportados: Int,
+    val rutaRespaldoPrevio: String = "",
+    val rutaRespaldoPosterior: String = ""
 )
 
 object RespaldoJsonManager {
