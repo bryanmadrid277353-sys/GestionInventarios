@@ -231,7 +231,7 @@ class AjustesAvanzadosViewModel(
         if (_uiState.value.estadoAcceso != EstadoPermisoAcceso.CONCEDIDO) {
             _uiState.update { it.copy(mostrarDialogoFaltaAccesoImportar = true) }
         } else {
-            almacenRespaldos.asegurarCarpetaExiste(AlmacenRespaldos.CARPETA_RESPALDOS)
+            almacenRespaldos.asegurarCarpetaExiste()
             _uiState.update { it.copy(mostrarAvisoImportar = true) }
         }
     }
