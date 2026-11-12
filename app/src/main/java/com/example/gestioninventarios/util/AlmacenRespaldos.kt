@@ -22,7 +22,7 @@ class AlmacenRespaldos(private val context: Context) {
     companion object {
         const val CARPETA_APP = "Inventario PYME"
         const val CARPETA_RESPALDOS = "Respaldos de Datos"
-        const val CARPETA_PREVIO_IMPORTAR = "Previo a Importar"
+        const val CARPETA_OTROS = "Otros"
 
         fun generarNombreArchivo(prefijo: String = "InventarioPYME", marcaTiempo: String? = null): String {
             val fecha = marcaTiempo ?: SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())

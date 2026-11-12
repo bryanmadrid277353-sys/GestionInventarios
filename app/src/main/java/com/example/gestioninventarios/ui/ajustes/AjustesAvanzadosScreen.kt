@@ -515,7 +515,7 @@ fun AjustesAvanzadosScreenContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Se guardarán dos copias automáticas en 'Respaldos de Datos › Previo a Importar' (una del estado previo y otra del posterior).",
+                        text = "Se guardarán dos copias automáticas en 'Respaldos de Datos › Otros' (una del estado previo y otra del posterior).",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -564,7 +564,7 @@ fun AjustesAvanzadosScreenContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Se crearán respaldos automático previo y posterior en 'Respaldos de Datos › Previo a Importar'.",
+                        text = "Se crearán respaldos automático previo y posterior en 'Respaldos de Datos › Otros'.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -637,7 +637,7 @@ fun AjustesAvanzadosScreenContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Esta acción no se puede deshacer. Antes se guardará un respaldo automático. Los archivos de la carpeta Respaldos de Datos no se borran.",
+                        text = "Esta acción no se puede deshacer. Antes se guardará una copia automática en Respaldos de Datos › Otros. Los archivos de la carpeta Respaldos de Datos no se borran.",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold
                     )

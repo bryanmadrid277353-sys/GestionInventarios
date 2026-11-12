@@ -328,13 +328,13 @@ class AjustesAvanzadosViewModel(
             var rutaPrevio = ""
             var rutaPosterior = ""
 
-            // 1. Respaldo previo automático obligatorio en "Previo a Importar"
+            // 1. Respaldo previo automático obligatorio en "Otros"
             try {
                 val jsonPrevio = generarJsonRespaldoActual()
                 val resPrevio = almacenRespaldos.guardarRespaldoJson(
                     jsonContenido = jsonPrevio,
                     prefijoNombre = "InventarioPYME_previo-a-importar",
-                    subcarpeta = AlmacenRespaldos.CARPETA_PREVIO_IMPORTAR,
+                    subcarpeta = AlmacenRespaldos.CARPETA_OTROS,
                     marcaTiempo = marcaTiempo
                 )
                 if (resPrevio.isFailure) {
@@ -599,14 +599,14 @@ class AjustesAvanzadosViewModel(
                     }
                 }
 
-                // 3. Respaldo posterior automático en "Previo a Importar"
+                // 3. Respaldo posterior automático en "Otros"
                 _uiState.update { it.copy(mensajeFaseProgreso = "Generando respaldo posterior a la importación...") }
                 try {
                     val jsonPosterior = generarJsonRespaldoActual()
                     val resPosterior = almacenRespaldos.guardarRespaldoJson(
                         jsonContenido = jsonPosterior,
                         prefijoNombre = "InventarioPYME_posterior-a-importar",
-                        subcarpeta = AlmacenRespaldos.CARPETA_PREVIO_IMPORTAR,
+                        subcarpeta = AlmacenRespaldos.CARPETA_OTROS,
                         marcaTiempo = marcaTiempo
                     )
                     if (resPosterior.isSuccess) {
@@ -689,11 +689,15 @@ class AjustesAvanzadosViewModel(
 
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Generando respaldo previo de seguridad...") }
 
-            // Respaldo previo automático obligatorio en la carpeta de respaldos principal
+            // Respaldo previo automático obligatorio en la subcarpeta "Otros"
             var resPrevioRuta = ""
             try {
                 val jsonPrevio = generarJsonRespaldoActual()
-                val resPrevio = almacenRespaldos.guardarRespaldoJson(jsonPrevio, "InventarioPYME_previo-a-eliminar")
+                val resPrevio = almacenRespaldos.guardarRespaldoJson(
+                    jsonContenido = jsonPrevio,
+                    prefijoNombre = "InventarioPYME_previo-a-eliminar",
+                    subcarpeta = AlmacenRespaldos.CARPETA_OTROS
+                )
                 if (resPrevio.isSuccess) {
                     resPrevioRuta = resPrevio.getOrThrow().rutaLegible
                 } else {
