@@ -15,6 +15,12 @@ interface ProveedorDao {
     @Query("SELECT * FROM proveedores ORDER BY id ASC")
     fun getAllProveedores(): List<ProveedorEntity>
 
+    @Query("SELECT * FROM proveedores ORDER BY id ASC")
+    fun exportarTodosProveedores(): List<ProveedorEntity>
+
+    @Query("SELECT COUNT(*) FROM proveedores")
+    fun contarProveedores(): Int
+
     @Query("SELECT * FROM proveedores WHERE id = :id LIMIT 1")
     fun getProveedorById(id: Int): ProveedorEntity?
 

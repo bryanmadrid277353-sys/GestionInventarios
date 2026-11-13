@@ -15,6 +15,12 @@ interface CategoriaDao {
     @Query("SELECT * FROM categorias ORDER BY id ASC")
     fun getAllCategorias(): List<CategoriaEntity>
 
+    @Query("SELECT * FROM categorias ORDER BY id ASC")
+    fun exportarTodasCategorias(): List<CategoriaEntity>
+
+    @Query("SELECT COUNT(*) FROM categorias")
+    fun contarCategorias(): Int
+
     @Query("SELECT * FROM categorias WHERE id = :id LIMIT 1")
     fun getCategoriaById(id: Int): CategoriaEntity?
 

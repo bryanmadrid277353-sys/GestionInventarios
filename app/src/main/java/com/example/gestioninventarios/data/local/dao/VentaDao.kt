@@ -24,8 +24,17 @@ interface VentaDao {
     @Query("SELECT * FROM ventas ORDER BY id ASC")
     fun getAllVentas(): List<VentaEntity>
 
+    @Query("SELECT * FROM ventas ORDER BY id ASC")
+    fun exportarTodasVentas(): List<VentaEntity>
+
+    @Query("SELECT COUNT(*) FROM ventas")
+    fun contarVentas(): Int
+
     @Query("SELECT * FROM detalle_ventas ORDER BY id ASC")
-    fun getAllDetalles(): List<DetalleVentaEntity>
+    fun exportarTodosDetallesVenta(): List<DetalleVentaEntity>
+
+    @Query("SELECT COUNT(*) FROM detalle_ventas")
+    fun contarDetallesVenta(): Int
 
     @Transaction
     @Query("SELECT * FROM ventas WHERE id = :id LIMIT 1")

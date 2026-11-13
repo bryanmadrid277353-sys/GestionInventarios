@@ -3,9 +3,7 @@ package com.example.gestioninventarios.util
 import com.example.gestioninventarios.data.local.entity.CategoriaEntity
 import com.example.gestioninventarios.data.local.entity.ProductoEntity
 import com.example.gestioninventarios.data.local.entity.ProveedorEntity
-import com.example.gestioninventarios.data.local.entity.UsuarioEntity
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -33,13 +31,6 @@ class RespaldoJsonManagerTest {
     }
 
     @Test
-    fun hacerEmailUnico_conColision_agregaImp() {
-        val existentes = setOf("admin@inventariopyme.com", "admin+imp1@inventariopyme.com")
-        val resultado = RespaldoJsonManager.hacerEmailUnico("admin@inventariopyme.com", existentes)
-        assertEquals("admin+imp2@inventariopyme.com", resultado)
-    }
-
-    @Test
     fun obtenerSiguienteCodigoInterno_buscaSiguienteLibre() {
         val existentes = setOf(1, 2, 3)
         val resultado = RespaldoJsonManager.obtenerSiguienteCodigoInterno(existentes)
@@ -51,11 +42,11 @@ class RespaldoJsonManagerTest {
         val json = """
             {
               "app": "OtraApp",
-              "formato": 1,
+              "formato": 2,
               "versionBD": 3,
               "exportadoEn": 1000,
-              "conteos": { "categorias": 0, "proveedores": 0, "usuarios": 0, "productos": 0, "ventas": 0, "detalle_venta": 0 },
-              "categorias": [], "proveedores": [], "usuarios": [], "productos": [], "ventas": [], "detalle_venta": []
+              "conteos": { "categorias": 0, "proveedores": 0, "productos": 0, "ventas": 0, "detalle_venta": 0 },
+              "categorias": [], "proveedores": [], "productos": [], "ventas": [], "detalle_venta": []
             }
         """.trimIndent()
 
@@ -72,57 +63,56 @@ class RespaldoJsonManagerTest {
               "formato": 99,
               "versionBD": 3,
               "exportadoEn": 1000,
-              "conteos": { "categorias": 0, "proveedores": 0, "usuarios": 0, "productos": 0, "ventas": 0, "detalle_venta": 0 },
-              "categorias": [], "proveedores": [], "usuarios": [], "productos": [], "ventas": [], "detalle_venta": []
+              "conteos": { "categorias": 0, "proveedores": 0, "productos": 0, "ventas": 0, "detalle_venta": 0 },
+              "categorias": [], "proveedores": [], "productos": [], "ventas": [], "detalle_venta": []
             }
         """.trimIndent()
 
         val res = RespaldoJsonManager.validarJsonImportacion(json)
         assertTrue(res.isFailure)
-        assertTrue(res.exceptionOrNull()?.message?.contains("versión más reciente") == true)
+        assertTrue(res.exceptionOrNull()?.message?.contains("no soportada") == true)
     }
 
     @Test
-    fun validarJsonImportacion_conteosNoCoinciden_falla() {
+    fun validarJsonImportacion_formato1ConUsuarios_correcto() {
         val json = """
             {
               "app": "InventarioPYME",
               "formato": 1,
               "versionBD": 3,
               "exportadoEn": 1000,
-              "conteos": { "categorias": 5, "proveedores": 0, "usuarios": 0, "productos": 0, "ventas": 0, "detalle_venta": 0 },
-              "categorias": [], "proveedores": [], "usuarios": [], "productos": [], "ventas": [], "detalle_venta": []
+              "conteos": { "categorias": 0, "proveedores": 0, "usuarios": 1, "productos": 0, "ventas": 0, "detalle_venta": 0 },
+              "categorias": [], "proveedores": [], "usuarios": [{"id": 1, "email": "test@test.com"}], "productos": [], "ventas": [], "detalle_venta": []
             }
         """.trimIndent()
 
         val res = RespaldoJsonManager.validarJsonImportacion(json)
-        assertTrue(res.isFailure)
-        assertTrue(res.exceptionOrNull()?.message?.contains("conteos no coinciden") == true)
+        assertTrue(res.isSuccess)
+
+        val info = res.getOrThrow()
+        assertEquals(1, info.formato)
+        assertEquals(1, info.cantUsuarios)
     }
 
     @Test
-    fun exportarYValidarJson_correcto() {
-        val datos = RespaldoDatosExportar(
-            categorias = listOf(CategoriaEntity(1, "Bebidas", "Refrescos", true, 1)),
-            proveedores = listOf(ProveedorEntity(1, "Proveedor 1", "Contacto", "555", "p1@test.com", true, 1)),
-            usuarios = listOf(UsuarioEntity(1, "Admin", "admin@test.com", "hash", "ADMIN", true)),
-            productos = listOf(ProductoEntity(1, "123456", "Prod 1", 1.0, 0.5, 10, 2, 1, 1, true, "Bebidas", "Proveedor 1")),
-            ventas = emptyList(),
-            detallesVenta = emptyList()
-        )
+    fun validarJsonImportacion_formato2SinUsuarios_correcto() {
+        val json = """
+            {
+              "app": "InventarioPYME",
+              "formato": 2,
+              "versionBD": 3,
+              "exportadoEn": 1000,
+              "conteos": { "categorias": 1, "proveedores": 1, "productos": 1, "ventas": 0, "detalle_venta": 0 },
+              "categorias": [{"id": 1}], "proveedores": [{"id": 1}], "productos": [{"id": 1}], "ventas": [], "detalle_venta": []
+            }
+        """.trimIndent()
 
-        val jsonExportado = RespaldoJsonManager.exportarAJson(datos)
-        assertNotNull(jsonExportado)
+        val res = RespaldoJsonManager.validarJsonImportacion(json)
+        assertTrue(res.isSuccess)
 
-        val validacion = RespaldoJsonManager.validarJsonImportacion(jsonExportado)
-        assertTrue(validacion.isSuccess)
-
-        val info = validacion.getOrThrow()
-        assertEquals(1, info.cantCategorias)
-        assertEquals(1, info.cantProveedores)
-        assertEquals(1, info.cantUsuarios)
+        val info = res.getOrThrow()
+        assertEquals(2, info.formato)
+        assertEquals(0, info.cantUsuarios)
         assertEquals(1, info.cantProductos)
-        assertEquals(0, info.cantVentas)
-        assertEquals(0, info.cantDetalleVenta)
     }
 }

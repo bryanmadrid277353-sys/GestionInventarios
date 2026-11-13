@@ -1,19 +1,27 @@
 package com.example.gestioninventarios.util
 
+import android.util.JsonReader
+import android.util.JsonWriter
 import com.example.gestioninventarios.data.local.entity.CategoriaEntity
 import com.example.gestioninventarios.data.local.entity.DetalleVentaEntity
 import com.example.gestioninventarios.data.local.entity.ProductoEntity
 import com.example.gestioninventarios.data.local.entity.ProveedorEntity
-import com.example.gestioninventarios.data.local.entity.UsuarioEntity
 import com.example.gestioninventarios.data.local.entity.VentaEntity
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 
 data class RespaldoValidacionInfo(
+    val formato: Int,
     val exportadoEn: Long,
     val cantCategorias: Int,
     val cantProveedores: Int,
-    val cantUsuarios: Int,
+    val cantUsuarios: Int = 0,
     val cantProductos: Int,
     val cantVentas: Int,
     val cantDetalleVenta: Int
@@ -22,10 +30,11 @@ data class RespaldoValidacionInfo(
 data class RespaldoDatosExportar(
     val categorias: List<CategoriaEntity>,
     val proveedores: List<ProveedorEntity>,
-    val usuarios: List<UsuarioEntity>,
     val productos: List<ProductoEntity>,
     val ventas: List<VentaEntity>,
-    val detallesVenta: List<DetalleVentaEntity>
+    val detallesVenta: List<DetalleVentaEntity>,
+    val mapaUsuariosEmail: Map<Int, String> = emptyMap(),
+    val mapaUsuariosNombre: Map<Int, String> = emptyMap()
 )
 
 data class RespaldoResultadoImportacion(
@@ -33,8 +42,8 @@ data class RespaldoResultadoImportacion(
     val categoriasRenombradas: Int,
     val proveedoresImportados: Int,
     val proveedoresRenombrados: Int,
-    val usuariosImportados: Int,
-    val usuariosRenombrados: Int,
+    val usuariosImportados: Int = 0,
+    val usuariosRenombrados: Int = 0,
     val productosImportados: Int,
     val productosRenombrados: Int,
     val ventasImportadas: Int,
@@ -46,118 +55,259 @@ data class RespaldoResultadoImportacion(
 object RespaldoJsonManager {
 
     const val APP_IDENTIFIER = "InventarioPYME"
-    const val FORMATO_VERSION = 1
+    const val FORMATO_VERSION = 2
     const val VERSION_BD = 3
     const val TAMANO_MAX_BYTES = 50 * 1024 * 1024 // 50 MB
 
-    fun exportarAJson(datos: RespaldoDatosExportar): String {
-        val root = JSONObject()
-        root.put("app", APP_IDENTIFIER)
-        root.put("formato", FORMATO_VERSION)
-        root.put("versionBD", VERSION_BD)
-        root.put("exportadoEn", System.currentTimeMillis())
+    fun exportarAStream(datos: RespaldoDatosExportar, outputStream: OutputStream) {
+        val writer = JsonWriter(OutputStreamWriter(outputStream, Charsets.UTF_8))
+        writer.setIndent("  ")
 
-        val conteos = JSONObject()
-        conteos.put("categorias", datos.categorias.size)
-        conteos.put("proveedores", datos.proveedores.size)
-        conteos.put("usuarios", datos.usuarios.size)
-        conteos.put("productos", datos.productos.size)
-        conteos.put("ventas", datos.ventas.size)
-        conteos.put("detalle_venta", datos.detallesVenta.size)
-        root.put("conteos", conteos)
+        writer.beginObject()
+        writer.name("app").value(APP_IDENTIFIER)
+        writer.name("formato").value(FORMATO_VERSION)
+        writer.name("versionBD").value(VERSION_BD)
+        writer.name("exportadoEn").value(System.currentTimeMillis())
 
-        // Categorias
-        val arrayCat = JSONArray()
+        // Header conteos
+        writer.name("conteos").beginObject()
+        writer.name("categorias").value(datos.categorias.size.toLong())
+        writer.name("proveedores").value(datos.proveedores.size.toLong())
+        writer.name("productos").value(datos.productos.size.toLong())
+        writer.name("ventas").value(datos.ventas.size.toLong())
+        writer.name("detalle_venta").value(datos.detallesVenta.size.toLong())
+        writer.endObject()
+
+        // Categorías
+        writer.name("categorias").beginArray()
         for (cat in datos.categorias) {
-            val item = JSONObject()
-            item.put("id", cat.id)
-            item.put("nombre", cat.nombre)
-            item.put("descripcion", cat.descripcion ?: JSONObject.NULL)
-            item.put("activo", cat.activo)
-            item.put("codigo", cat.codigo)
-            arrayCat.put(item)
+            writer.beginObject()
+            writer.name("id").value(cat.id.toLong())
+            writer.name("nombre").value(cat.nombre)
+            if (cat.descripcion != null) writer.name("descripcion").value(cat.descripcion) else writer.name("descripcion").nullValue()
+            writer.name("activo").value(cat.activo)
+            writer.name("codigo").value(cat.codigo.toLong())
+            writer.endObject()
         }
-        root.put("categorias", arrayCat)
+        writer.endArray()
 
         // Proveedores
-        val arrayProv = JSONArray()
+        writer.name("proveedores").beginArray()
         for (prov in datos.proveedores) {
-            val item = JSONObject()
-            item.put("id", prov.id)
-            item.put("nombre", prov.nombre)
-            item.put("contacto", prov.contacto ?: JSONObject.NULL)
-            item.put("telefono", prov.telefono ?: JSONObject.NULL)
-            item.put("email", prov.email ?: JSONObject.NULL)
-            item.put("activo", prov.activo)
-            item.put("codigo", prov.codigo)
-            arrayProv.put(item)
+            writer.beginObject()
+            writer.name("id").value(prov.id.toLong())
+            writer.name("nombre").value(prov.nombre)
+            if (prov.contacto != null) writer.name("contacto").value(prov.contacto) else writer.name("contacto").nullValue()
+            if (prov.telefono != null) writer.name("telefono").value(prov.telefono) else writer.name("telefono").nullValue()
+            if (prov.email != null) writer.name("email").value(prov.email) else writer.name("email").nullValue()
+            writer.name("activo").value(prov.activo)
+            writer.name("codigo").value(prov.codigo.toLong())
+            writer.endObject()
         }
-        root.put("proveedores", arrayProv)
-
-        // Usuarios
-        val arrayUsr = JSONArray()
-        for (usr in datos.usuarios) {
-            val item = JSONObject()
-            item.put("id", usr.id)
-            item.put("nombre", usr.nombre)
-            item.put("email", usr.email)
-            item.put("passwordHash", usr.passwordHash)
-            item.put("rol", usr.rol)
-            item.put("activo", usr.activo)
-            arrayUsr.put(item)
-        }
-        root.put("usuarios", arrayUsr)
+        writer.endArray()
 
         // Productos
-        val arrayProd = JSONArray()
+        writer.name("productos").beginArray()
         for (prod in datos.productos) {
-            val item = JSONObject()
-            item.put("id", prod.id)
-            item.put("codigoBarras", prod.codigoBarras)
-            item.put("nombre", prod.nombre)
-            item.put("precio", prod.precio)
-            item.put("costo", prod.costo)
-            item.put("stock", prod.stock)
-            item.put("stockMinimo", prod.stockMinimo)
-            item.put("categoriaId", prod.categoriaId)
-            item.put("proveedorId", prod.proveedorId)
-            item.put("activo", prod.activo)
-            item.put("categoriaNombre", prod.categoriaNombre ?: JSONObject.NULL)
-            item.put("proveedorNombre", prod.proveedorNombre ?: JSONObject.NULL)
-            arrayProd.put(item)
+            writer.beginObject()
+            writer.name("id").value(prod.id.toLong())
+            writer.name("codigoBarras").value(prod.codigoBarras)
+            writer.name("nombre").value(prod.nombre)
+            writer.name("precio").value(prod.precio)
+            writer.name("costo").value(prod.costo)
+            writer.name("stock").value(prod.stock.toLong())
+            writer.name("stockMinimo").value(prod.stockMinimo.toLong())
+            writer.name("categoriaId").value(prod.categoriaId.toLong())
+            writer.name("proveedorId").value(prod.proveedorId.toLong())
+            writer.name("activo").value(prod.activo)
+            if (prod.categoriaNombre != null) writer.name("categoriaNombre").value(prod.categoriaNombre) else writer.name("categoriaNombre").nullValue()
+            if (prod.proveedorNombre != null) writer.name("proveedorNombre").value(prod.proveedorNombre) else writer.name("proveedorNombre").nullValue()
+            writer.endObject()
         }
-        root.put("productos", arrayProd)
+        writer.endArray()
 
         // Ventas
-        val arrayVta = JSONArray()
+        writer.name("ventas").beginArray()
         for (vta in datos.ventas) {
-            val item = JSONObject()
-            item.put("id", vta.id)
-            item.put("usuarioId", vta.usuarioId)
-            item.put("usuarioNombre", vta.usuarioNombre)
-            item.put("fechaVenta", vta.fechaVenta)
-            item.put("total", vta.total)
-            arrayVta.put(item)
+            writer.beginObject()
+            writer.name("id").value(vta.id.toLong())
+            writer.name("usuarioId").value(vta.usuarioId.toLong())
+            writer.name("usuarioNombre").value(vta.usuarioNombre)
+            val correo = datos.mapaUsuariosEmail[vta.usuarioId] ?: ""
+            val nomComp = datos.mapaUsuariosNombre[vta.usuarioId] ?: vta.usuarioNombre
+            writer.name("vendedorCorreo").value(correo)
+            writer.name("vendedorNombre").value(nomComp)
+            writer.name("fechaVenta").value(vta.fechaVenta)
+            writer.name("total").value(vta.total)
+            writer.endObject()
         }
-        root.put("ventas", arrayVta)
+        writer.endArray()
 
         // Detalle Venta
-        val arrayDet = JSONArray()
+        writer.name("detalle_venta").beginArray()
         for (det in datos.detallesVenta) {
-            val item = JSONObject()
-            item.put("id", det.id)
-            item.put("ventaId", det.ventaId)
-            item.put("productoId", det.productoId)
-            item.put("productoNombre", det.productoNombre)
-            item.put("codigoBarras", det.codigoBarras)
-            item.put("cantidad", det.cantidad)
-            item.put("precioUnitario", det.precioUnitario)
-            item.put("subtotal", det.subtotal)
-            arrayDet.put(item)
+            writer.beginObject()
+            writer.name("id").value(det.id.toLong())
+            writer.name("ventaId").value(det.ventaId.toLong())
+            writer.name("productoId").value(det.productoId.toLong())
+            writer.name("productoNombre").value(det.productoNombre)
+            writer.name("codigoBarras").value(det.codigoBarras)
+            writer.name("cantidad").value(det.cantidad.toLong())
+            writer.name("precioUnitario").value(det.precioUnitario)
+            writer.name("subtotal").value(det.subtotal)
+            writer.endObject()
         }
-        root.put("detalle_venta", arrayDet)
+        writer.endArray()
 
-        return root.toString(2)
+        writer.endObject()
+        writer.flush()
+    }
+
+    fun verificarArchivoTemporal(
+        fileTmp: File,
+        dbCounts: Map<String, Int>
+    ): Result<RespaldoValidacionInfo> {
+        return try {
+            val reader = JsonReader(BufferedReader(InputStreamReader(FileInputStream(fileTmp), Charsets.UTF_8)))
+            var app = ""
+            var formato = 0
+            var exportadoEn = 0L
+
+            var cantCatHeader = -1
+            var cantProvHeader = -1
+            var cantUsrHeader = -1
+            var cantProdHeader = -1
+            var cantVtaHeader = -1
+            var cantDetHeader = -1
+
+            var cantCatArray = 0
+            var cantProvArray = 0
+            var cantUsrArray = 0
+            var cantProdArray = 0
+            var cantVtaArray = 0
+            var cantDetArray = 0
+
+            reader.beginObject()
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "app" -> app = reader.nextString()
+                    "formato" -> formato = reader.nextInt()
+                    "versionBD" -> reader.nextInt()
+                    "exportadoEn" -> exportadoEn = reader.nextLong()
+                    "conteos" -> {
+                        reader.beginObject()
+                        while (reader.hasNext()) {
+                            when (reader.nextName()) {
+                                "categorias" -> cantCatHeader = reader.nextInt()
+                                "proveedores" -> cantProvHeader = reader.nextInt()
+                                "usuarios" -> cantUsrHeader = reader.nextInt()
+                                "productos" -> cantProdHeader = reader.nextInt()
+                                "ventas" -> cantVtaHeader = reader.nextInt()
+                                "detalle_venta" -> cantDetHeader = reader.nextInt()
+                                else -> reader.skipValue()
+                            }
+                        }
+                        reader.endObject()
+                    }
+                    "categorias" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                            cantCatArray++
+                        }
+                        reader.endArray()
+                    }
+                    "proveedores" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                            cantProvArray++
+                        }
+                        reader.endArray()
+                    }
+                    "usuarios" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                            cantUsrArray++
+                        }
+                        reader.endArray()
+                    }
+                    "productos" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                            cantProdArray++
+                        }
+                        reader.endArray()
+                    }
+                    "ventas" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                            cantVtaArray++
+                        }
+                        reader.endArray()
+                    }
+                    "detalle_venta" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                            cantDetArray++
+                        }
+                        reader.endArray()
+                    }
+                    else -> reader.skipValue()
+                }
+            }
+            reader.endObject()
+            reader.close()
+
+            if (app != APP_IDENTIFIER) {
+                return Result.failure(IllegalStateException("Identificador de aplicación inválido en el respaldo"))
+            }
+            if (formato > FORMATO_VERSION || formato < 1) {
+                return Result.failure(IllegalStateException("Formato de versión ($formato) no soportado"))
+            }
+
+            // Verificar conteos
+            val expectedCat = dbCounts["categorias"] ?: 0
+            val expectedProv = dbCounts["proveedores"] ?: 0
+            val expectedProd = dbCounts["productos"] ?: 0
+            val expectedVta = dbCounts["ventas"] ?: 0
+            val expectedDet = dbCounts["detalle_venta"] ?: 0
+
+            if (cantCatHeader != expectedCat || cantCatArray != expectedCat) {
+                return Result.failure(IllegalStateException("El respaldo no quedó completo y no se guardó (Categorías: esperadas $expectedCat, en archivo $cantCatArray)"))
+            }
+            if (cantProvHeader != expectedProv || cantProvArray != expectedProv) {
+                return Result.failure(IllegalStateException("El respaldo no quedó completo y no se guardó (Proveedores: esperados $expectedProv, en archivo $cantProvArray)"))
+            }
+            if (cantProdHeader != expectedProd || cantProdArray != expectedProd) {
+                return Result.failure(IllegalStateException("El respaldo no quedó completo y no se guardó (Productos: esperados $expectedProd, en archivo $cantProdArray)"))
+            }
+            if (cantVtaHeader != expectedVta || cantVtaArray != expectedVta) {
+                return Result.failure(IllegalStateException("El respaldo no quedó completo y no se guardó (Ventas: esperadas $expectedVta, en archivo $cantVtaArray)"))
+            }
+            if (cantDetHeader != expectedDet || cantDetArray != expectedDet) {
+                return Result.failure(IllegalStateException("El respaldo no quedó completo y no se guardó (Detalles de Venta: esperados $expectedDet, en archivo $cantDetArray)"))
+            }
+
+            Result.success(
+                RespaldoValidacionInfo(
+                    formato = formato,
+                    exportadoEn = exportadoEn,
+                    cantCategorias = cantCatArray,
+                    cantProveedores = cantProvArray,
+                    cantUsuarios = cantUsrArray,
+                    cantProductos = cantProdArray,
+                    cantVentas = cantVtaArray,
+                    cantDetalleVenta = cantDetArray
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(IllegalStateException("El respaldo no quedó completo y no se guardó (Excepción: ${e.localizedMessage})", e))
+        }
     }
 
     fun validarJsonImportacion(jsonStr: String): Result<RespaldoValidacionInfo> {
@@ -175,11 +325,8 @@ object RespaldoJsonManager {
             }
 
             val formato = root.optInt("formato", -1)
-            if (formato > FORMATO_VERSION) {
-                return Result.failure(IllegalArgumentException("Este respaldo es de una versión más reciente de la app"))
-            }
-            if (formato < 1) {
-                return Result.failure(IllegalArgumentException("Formato de archivo no válido"))
+            if (formato > FORMATO_VERSION || formato < 1) {
+                return Result.failure(IllegalArgumentException("Este respaldo es de una versión ($formato) no soportada por esta app"))
             }
 
             val exportadoEn = root.optLong("exportadoEn", 0L)
@@ -194,9 +341,11 @@ object RespaldoJsonManager {
             val vtaArray = root.optJSONArray("ventas") ?: JSONArray()
             val detArray = root.optJSONArray("detalle_venta") ?: JSONArray()
 
+            val usrCountHeader = if (formato >= 2) usrArray.length() else conteos.optInt("usuarios", -1)
+
             if (conteos.optInt("categorias", -1) != catArray.length() ||
                 conteos.optInt("proveedores", -1) != provArray.length() ||
-                conteos.optInt("usuarios", -1) != usrArray.length() ||
+                usrCountHeader != usrArray.length() ||
                 conteos.optInt("productos", -1) != prodArray.length() ||
                 conteos.optInt("ventas", -1) != vtaArray.length() ||
                 conteos.optInt("detalle_venta", -1) != detArray.length()
@@ -206,6 +355,7 @@ object RespaldoJsonManager {
 
             Result.success(
                 RespaldoValidacionInfo(
+                    formato = formato,
                     exportadoEn = exportadoEn,
                     cantCategorias = catArray.length(),
                     cantProveedores = provArray.length(),
@@ -251,26 +401,6 @@ object RespaldoJsonManager {
         while (true) {
             val candidato = "$baseCodigo-I$i"
             if (!existentes.contains(candidato)) {
-                return candidato
-            }
-            i++
-        }
-    }
-
-    fun hacerEmailUnico(
-        baseEmail: String,
-        existentes: Set<String>
-    ): String {
-        if (!existentes.contains(baseEmail.lowercase())) {
-            return baseEmail
-        }
-        val partes = baseEmail.split("@")
-        val local = partes.getOrElse(0) { "usuario" }
-        val dominio = partes.getOrElse(1) { "inventariopyme.com" }
-        var i = 1
-        while (true) {
-            val candidato = "${local}+imp$i@$dominio"
-            if (!existentes.contains(candidato.lowercase())) {
                 return candidato
             }
             i++

@@ -11,7 +11,6 @@ import com.example.gestioninventarios.data.local.entity.CategoriaEntity
 import com.example.gestioninventarios.data.local.entity.DetalleVentaEntity
 import com.example.gestioninventarios.data.local.entity.ProductoEntity
 import com.example.gestioninventarios.data.local.entity.ProveedorEntity
-import com.example.gestioninventarios.data.local.entity.UsuarioEntity
 import com.example.gestioninventarios.data.local.entity.VentaEntity
 import com.example.gestioninventarios.util.AlmacenRespaldos
 import com.example.gestioninventarios.util.ErrorHumano
@@ -47,6 +46,7 @@ data class AjustesAvanzadosUiState(
     val estadoAcceso: EstadoPermisoAcceso? = null,
 
     val mensajeExitoExportacion: RespaldoResultado? = null,
+    val conteosUltimaExportacion: Map<String, Int>? = null,
     val errorHumano: ErrorHumano? = null,
 
     val mostrarAvisoImportar: Boolean = false,
@@ -137,6 +137,76 @@ class AjustesAvanzadosViewModel(
         return true
     }
 
+    private suspend fun obtenerDatosSnapshotAtómico(): Pair<RespaldoDatosExportar, Map<String, Int>> {
+        return appDatabase.withTransaction {
+            val catDao = appDatabase.categoriaDao()
+            val provDao = appDatabase.proveedorDao()
+            val usrDao = appDatabase.usuarioDao()
+            val prodDao = appDatabase.productoDao()
+            val vtaDao = appDatabase.ventaDao()
+
+            val catList = catDao.exportarTodasCategorias()
+            val catCount = catDao.contarCategorias()
+
+            val provList = provDao.exportarTodosProveedores()
+            val provCount = provDao.contarProveedores()
+
+            val prodList = prodDao.exportarTodosProductos()
+            val prodCount = prodDao.contarProductos()
+
+            val vtaList = vtaDao.exportarTodasVentas()
+            val vtaCount = vtaDao.contarVentas()
+
+            val detList = vtaDao.exportarTodosDetallesVenta()
+            val detCount = vtaDao.contarDetallesVenta()
+
+            val usrList = usrDao.getUsuarios()
+            val mapaEmails = usrList.associate { it.id to it.email }
+            val mapaNombres = usrList.associate { it.id to it.nombre }
+
+            val datos = RespaldoDatosExportar(
+                categorias = catList,
+                proveedores = provList,
+                productos = prodList,
+                ventas = vtaList,
+                detallesVenta = detList,
+                mapaUsuariosEmail = mapaEmails,
+                mapaUsuariosNombre = mapaNombres
+            )
+
+            val counts = mapOf(
+                "categorias" to catCount,
+                "proveedores" to provCount,
+                "productos" to prodCount,
+                "ventas" to vtaCount,
+                "detalle_venta" to detCount
+            )
+
+            Pair(datos, counts)
+        }
+    }
+
+    private suspend fun generarYGuardarRespaldoVerificado(
+        prefijoNombre: String,
+        subcarpeta: String? = null,
+        marcaTiempo: String? = null
+    ): Result<Pair<RespaldoResultado, Map<String, Int>>> {
+        val (datos, dbCounts) = obtenerDatosSnapshotAtómico()
+        val resultado = almacenRespaldos.guardarRespaldoJsonVerificado(
+            datos = datos,
+            dbCounts = dbCounts,
+            prefijoNombre = prefijoNombre,
+            subcarpeta = subcarpeta,
+            marcaTiempo = marcaTiempo
+        )
+
+        return if (resultado.isSuccess) {
+            Result.success(Pair(resultado.getOrThrow(), dbCounts))
+        } else {
+            Result.failure(resultado.exceptionOrNull() ?: IllegalStateException("Error al generar respaldo"))
+        }
+    }
+
     // ================= 1. EXPORTACIÓN =================
 
     fun exportarRespaldo() {
@@ -158,11 +228,10 @@ class AjustesAvanzadosViewModel(
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Exportando respaldo de datos...") }
 
             try {
-                val jsonStr = generarJsonRespaldoActual()
-                val resultado = almacenRespaldos.guardarRespaldoJson(jsonStr, "InventarioPYME")
+                val resultado = generarYGuardarRespaldoVerificado("InventarioPYME")
 
                 if (resultado.isSuccess) {
-                    val res = resultado.getOrThrow()
+                    val (res, counts) = resultado.getOrThrow()
                     val fechaFormateada = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.ROOT).format(Date())
                     preferenciasManager.guardarUltimoRespaldo(fechaFormateada, res.rutaLegible)
 
@@ -172,7 +241,8 @@ class AjustesAvanzadosViewModel(
                             mensajeFaseProgreso = null,
                             ultimoRespaldoFecha = fechaFormateada,
                             ultimoRespaldoUbicacion = res.rutaLegible,
-                            mensajeExitoExportacion = res
+                            mensajeExitoExportacion = res,
+                            conteosUltimaExportacion = counts
                         )
                     }
                 } else {
@@ -197,28 +267,8 @@ class AjustesAvanzadosViewModel(
         }
     }
 
-    private fun generarJsonRespaldoActual(): String {
-        val categorias = appDatabase.categoriaDao().getAllCategorias()
-        val proveedores = appDatabase.proveedorDao().getAllProveedores()
-        val usuarios = appDatabase.usuarioDao().getUsuarios()
-        val productos = appDatabase.productoDao().getAllProductos()
-        val ventas = appDatabase.ventaDao().getAllVentas()
-        val detalles = appDatabase.ventaDao().getAllDetalles()
-
-        val datos = RespaldoDatosExportar(
-            categorias = categorias,
-            proveedores = proveedores,
-            usuarios = usuarios,
-            productos = productos,
-            ventas = ventas,
-            detallesVenta = detalles
-        )
-
-        return RespaldoJsonManager.exportarAJson(datos)
-    }
-
     fun dismissExitoExportacionDialog() {
-        _uiState.update { it.copy(mensajeExitoExportacion = null) }
+        _uiState.update { it.copy(mensajeExitoExportacion = null, conteosUltimaExportacion = null) }
     }
 
     fun dismissErrorDialog() {
@@ -322,7 +372,6 @@ class AjustesAvanzadosViewModel(
 
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Generando respaldo previo a la importación...") }
 
-            // Generar marca de tiempo única para el par previo y posterior
             val marcaTiempo = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
 
             var rutaPrevio = ""
@@ -330,9 +379,7 @@ class AjustesAvanzadosViewModel(
 
             // 1. Respaldo previo automático obligatorio en "Otros"
             try {
-                val jsonPrevio = generarJsonRespaldoActual()
-                val resPrevio = almacenRespaldos.guardarRespaldoJson(
-                    jsonContenido = jsonPrevio,
+                val resPrevio = generarYGuardarRespaldoVerificado(
                     prefijoNombre = "InventarioPYME_previo-a-importar",
                     subcarpeta = AlmacenRespaldos.CARPETA_OTROS,
                     marcaTiempo = marcaTiempo
@@ -348,7 +395,7 @@ class AjustesAvanzadosViewModel(
                     }
                     return@launch
                 }
-                rutaPrevio = resPrevio.getOrThrow().rutaLegible
+                rutaPrevio = resPrevio.getOrThrow().first.rutaLegible
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -362,19 +409,33 @@ class AjustesAvanzadosViewModel(
 
             _uiState.update { it.copy(mensajeFaseProgreso = "Importando registros en base de datos...") }
 
-            // 2. Transacción de importación
+            // 2. Transacción de importación (SIN insertar ni modificar usuarios)
             try {
                 val root = JSONObject(jsonStr)
                 val catArray = root.getJSONArray("categorias")
                 val provArray = root.getJSONArray("proveedores")
-                val usrArray = root.getJSONArray("usuarios")
                 val prodArray = root.getJSONArray("productos")
                 val vtaArray = root.getJSONArray("ventas")
                 val detArray = root.getJSONArray("detalle_venta")
 
+                // Si es un archivo de formato 1, leer el mapa idViejo -> email para asociar ventas
+                val mapaUsrViejoIdAEmail = mutableMapOf<Int, String>()
+                if (root.has("usuarios")) {
+                    val usrArray = root.optJSONArray("usuarios")
+                    if (usrArray != null) {
+                        for (i in 0 until usrArray.length()) {
+                            val uItem = usrArray.getJSONObject(i)
+                            val oldUId = uItem.optInt("id", -1)
+                            val uEmail = uItem.optString("email", "")
+                            if (oldUId != -1 && uEmail.isNotEmpty()) {
+                                mapaUsrViejoIdAEmail[oldUId] = uEmail
+                            }
+                        }
+                    }
+                }
+
                 var renamedCat = 0
                 var renamedProv = 0
-                var renamedUsr = 0
                 var renamedProd = 0
 
                 appDatabase.withTransaction {
@@ -390,15 +451,16 @@ class AjustesAvanzadosViewModel(
                     val existingProvNames = provDao.getAllProveedores().map { it.nombre.lowercase() }.toMutableSet()
                     val existingProvCodes = provDao.getAllProveedores().map { it.codigo }.toMutableSet()
 
-                    val existingUserEmails = usrDao.getUsuarios().map { it.email.lowercase() }.toMutableSet()
-                    val existingUserNames = usrDao.getUsuarios().map { it.nombre.lowercase() }.toMutableSet()
-
                     val existingProductBarcodes = prodDao.getAllProductos().map { it.codigoBarras }.toMutableSet()
                     val existingProductNames = prodDao.getAllProductos().map { it.nombre.lowercase() }.toMutableSet()
 
+                    // Mapa de usuarios existentes por correo (case-insensitive)
+                    val usuariosExistentes = usrDao.getUsuarios()
+                    val mapaUsrEmailAId = usuariosExistentes.associate { it.email.lowercase() to it.id }
+                    val currentAdminId = tokenStore.userId.first() ?: (usuariosExistentes.firstOrNull()?.id ?: 1)
+
                     val mapCatId = mutableMapOf<Int, Int>()
                     val mapProvId = mutableMapOf<Int, Int>()
-                    val mapUserId = mutableMapOf<Int, Int>()
                     val mapProdId = mutableMapOf<Int, Int>()
                     val mapVtaId = mutableMapOf<Int, Int>()
 
@@ -460,34 +522,7 @@ class AjustesAvanzadosViewModel(
                         mapProvId[oldId] = newId
                     }
 
-                    // Usuarios
-                    for (i in 0 until usrArray.length()) {
-                        val item = usrArray.getJSONObject(i)
-                        val oldId = item.getInt("id")
-                        val nombre = item.getString("nombre")
-                        val email = item.getString("email")
-                        val hash = item.getString("passwordHash")
-                        val rol = item.getString("rol")
-
-                        val emailUnico = RespaldoJsonManager.hacerEmailUnico(email, existingUserEmails)
-                        if (emailUnico != email) renamedUsr++
-                        existingUserEmails.add(emailUnico.lowercase())
-
-                        val nombreUnico = RespaldoJsonManager.hacerNombreUnico(nombre, existingUserNames)
-                        existingUserNames.add(nombreUnico.lowercase())
-
-                        val newId = usrDao.insertUsuario(
-                            UsuarioEntity(
-                                id = 0,
-                                nombre = nombreUnico,
-                                email = emailUnico,
-                                passwordHash = hash,
-                                rol = rol,
-                                activo = false
-                            )
-                        ).toInt()
-                        mapUserId[oldId] = newId
-                    }
+                    // NO SE INSERTAN USUARIOS
 
                     // Productos
                     for (i in 0 until prodArray.length()) {
@@ -540,16 +575,23 @@ class AjustesAvanzadosViewModel(
                     }
 
                     // Ventas
-                    val currentAdminId = tokenStore.userId.first() ?: 1
                     for (i in 0 until vtaArray.length()) {
                         val item = vtaArray.getJSONObject(i)
                         val oldId = item.getInt("id")
-                        val oldUsrId = item.getInt("usuarioId")
-                        val usrNombre = item.getString("usuarioNombre")
+                        val oldUsrId = item.optInt("usuarioId", -1)
+                        val usrNombre = item.optString("usuarioNombre", "Vendedor")
+                        val vCor = item.optString("vendedorCorreo", "").ifEmpty {
+                            mapaUsrViejoIdAEmail[oldUsrId] ?: ""
+                        }
                         val fecha = item.getString("fechaVenta")
                         val total = item.getDouble("total")
 
-                        val newUsrId = mapUserId[oldUsrId] ?: currentAdminId
+                        // Asignar venta a un usuario existente por correo o al admin actual
+                        val newUsrId = if (vCor.isNotEmpty()) {
+                            mapaUsrEmailAId[vCor.lowercase()] ?: currentAdminId
+                        } else {
+                            currentAdminId
+                        }
 
                         val newVtaId = vtaDao.insertVenta(
                             VentaEntity(
@@ -602,15 +644,13 @@ class AjustesAvanzadosViewModel(
                 // 3. Respaldo posterior automático en "Otros"
                 _uiState.update { it.copy(mensajeFaseProgreso = "Generando respaldo posterior a la importación...") }
                 try {
-                    val jsonPosterior = generarJsonRespaldoActual()
-                    val resPosterior = almacenRespaldos.guardarRespaldoJson(
-                        jsonContenido = jsonPosterior,
+                    val resPosterior = generarYGuardarRespaldoVerificado(
                         prefijoNombre = "InventarioPYME_posterior-a-importar",
                         subcarpeta = AlmacenRespaldos.CARPETA_OTROS,
                         marcaTiempo = marcaTiempo
                     )
                     if (resPosterior.isSuccess) {
-                        rutaPosterior = resPosterior.getOrThrow().rutaLegible
+                        rutaPosterior = resPosterior.getOrThrow().first.rutaLegible
                     } else {
                         rutaPosterior = "No se pudo crear el respaldo posterior: ${resPosterior.exceptionOrNull()?.message}"
                     }
@@ -627,8 +667,8 @@ class AjustesAvanzadosViewModel(
                             categoriasRenombradas = renamedCat,
                             proveedoresImportados = provArray.length(),
                             proveedoresRenombrados = renamedProv,
-                            usuariosImportados = usrArray.length(),
-                            usuariosRenombrados = renamedUsr,
+                            usuariosImportados = 0,
+                            usuariosRenombrados = 0,
                             productosImportados = prodArray.length(),
                             productosRenombrados = renamedProd,
                             ventasImportadas = vtaArray.length(),
@@ -689,17 +729,14 @@ class AjustesAvanzadosViewModel(
 
             _uiState.update { it.copy(cargando = true, mensajeFaseProgreso = "Generando respaldo previo de seguridad...") }
 
-            // Respaldo previo automático obligatorio en la subcarpeta "Otros"
             var resPrevioRuta = ""
             try {
-                val jsonPrevio = generarJsonRespaldoActual()
-                val resPrevio = almacenRespaldos.guardarRespaldoJson(
-                    jsonContenido = jsonPrevio,
+                val resPrevio = generarYGuardarRespaldoVerificado(
                     prefijoNombre = "InventarioPYME_previo-a-eliminar",
                     subcarpeta = AlmacenRespaldos.CARPETA_OTROS
                 )
                 if (resPrevio.isSuccess) {
-                    resPrevioRuta = resPrevio.getOrThrow().rutaLegible
+                    resPrevioRuta = resPrevio.getOrThrow().first.rutaLegible
                 } else {
                     val ex = resPrevio.exceptionOrNull() ?: IllegalStateException("Error al crear respaldo previo")
                     _uiState.update {
@@ -722,11 +759,9 @@ class AjustesAvanzadosViewModel(
                 return@launch
             }
 
-            _uiState.update { it.copy(mensajeFaseProgreso = "Eliminando todos los datos del sistema...") }
+            _uiState.update { it.copy(mensajeFaseProgreso = "Eliminando datos del sistema (conservando usuarios)...") }
 
             try {
-                val currentAdminId = tokenStore.userId.first() ?: 1
-
                 appDatabase.withTransaction {
                     val db = appDatabase.openHelper.writableDatabase
                     db.execSQL("DELETE FROM detalle_ventas")
@@ -734,8 +769,8 @@ class AjustesAvanzadosViewModel(
                     db.execSQL("DELETE FROM productos")
                     db.execSQL("DELETE FROM categorias")
                     db.execSQL("DELETE FROM proveedores")
-                    db.execSQL("DELETE FROM usuarios WHERE id != $currentAdminId")
-                    db.execSQL("DELETE FROM sqlite_sequence WHERE name IN ('detalle_ventas', 'ventas', 'productos', 'categorias', 'proveedores', 'usuarios')")
+                    // NO se eliminan usuarios
+                    db.execSQL("DELETE FROM sqlite_sequence WHERE name IN ('detalle_ventas', 'ventas', 'productos', 'categorias', 'proveedores')")
                 }
 
                 preferenciasManager.setDatosSembrados(true)
@@ -744,7 +779,7 @@ class AjustesAvanzadosViewModel(
                     it.copy(
                         cargando = false,
                         mensajeFaseProgreso = null,
-                        resultadoEliminacion = "Todos los datos de productos, categorías, proveedores y ventas han sido eliminados. Tu cuenta de administrador se conserva activa.\n\nRespaldo de seguridad previo guardado en:\n$resPrevioRuta"
+                        resultadoEliminacion = "Todos los productos, categorías, proveedores y ventas han sido eliminados. Los usuarios no se eliminaron.\n\nRespaldo de seguridad previo guardado en:\n$resPrevioRuta"
                     )
                 }
             } catch (e: Exception) {

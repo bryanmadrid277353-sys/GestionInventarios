@@ -286,7 +286,7 @@ fun AjustesAvanzadosScreenContent(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Exporta toda la base de datos (productos, categorías, proveedores, ventas y usuarios) a un archivo JSON seguro.",
+                            text = "Exporta toda la base de datos (productos, categorías, proveedores y ventas) a un archivo JSON seguro.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -394,7 +394,7 @@ fun AjustesAvanzadosScreenContent(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Elimina permanentemente todos los productos, categorías, proveedores, ventas y usuarios (manteniendo tu cuenta activa).",
+                            text = "Elimina permanentemente todos los productos, categorías, proveedores y ventas (conservando los usuarios).",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -446,22 +446,31 @@ fun AjustesAvanzadosScreenContent(
 
     // B) Diálogo Éxito Exportación
     uiState.mensajeExitoExportacion?.let { res ->
+        val counts = uiState.conteosUltimaExportacion
         AlertDialog(
             onDismissRequest = onDismissExitoExportacion,
             title = { Text("Respaldo Creado Exitosamente", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
+                    if (counts != null) {
+                        Text(
+                            text = "Se exportaron: ${counts["productos"] ?: 0} productos, ${counts["categorias"] ?: 0} categorías, ${counts["proveedores"] ?: 0} proveedores, ${counts["ventas"] ?: 0} ventas y ${counts["detalle_venta"] ?: 0} detalles de venta.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                     Text("El archivo se guardó correctamente en:")
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = res.rutaLegible,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Este archivo contiene datos del negocio y usuarios con contraseñas cifradas. Guárdalo en un lugar seguro.",
+                        text = "Los usuarios no forman parte de los respaldos: no se exportan ni se importan.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -510,7 +519,7 @@ fun AjustesAvanzadosScreenContent(
             text = {
                 Column {
                     Text(
-                        text = "Los registros del archivo se agregarán como NUEVOS, por encima de los existentes. No se modificará ni se eliminará ningún dato actual. Si el archivo contiene datos que ya tienes, verás registros repetidos (las ventas repetidas se sumarán dos veces en los reportes). Los usuarios importados llegan desactivados.",
+                        text = "Los registros del archivo se agregarán como NUEVOS, por encima de los existentes. No se modificará ni se eliminará ningún dato actual. Si el archivo contiene datos que ya tienes, verás registros repetidos (las ventas repetidas se sumarán dos veces en los reportes). Los usuarios no forman parte de los respaldos: no se exportan ni se importan.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -553,9 +562,24 @@ fun AjustesAvanzadosScreenContent(
             text = {
                 Column {
                     Text(
-                        text = "Se importarán ${info.cantCategorias} categorías, ${info.cantProveedores} proveedores, ${info.cantProductos} productos, ${info.cantVentas} ventas y ${info.cantUsuarios} usuarios.",
+                        text = "Se importarán ${info.cantCategorias} categorías, ${info.cantProveedores} proveedores, ${info.cantProductos} productos y ${info.cantVentas} ventas.",
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    if (info.formato == 1 && info.cantUsuarios > 0) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Este respaldo (formato 1) incluye ${info.cantUsuarios} usuarios; no se importarán.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Los usuarios no forman parte de los respaldos: no se exportan ni se importan.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Respaldo realizado el: $fechaStr",
@@ -596,7 +620,6 @@ fun AjustesAvanzadosScreenContent(
                     Text("• Proveedores: ${res.proveedoresImportados} (${res.proveedoresRenombrados} renombrados)")
                     Text("• Productos: ${res.productosImportados} (${res.productosRenombrados} renombrados)")
                     Text("• Ventas: ${res.ventasImportadas} (${res.detallesImportados} detalles)")
-                    Text("• Usuarios: ${res.usuariosImportados} (desactivados por seguridad)")
                     Spacer(modifier = Modifier.height(10.dp))
                     if (res.rutaRespaldoPrevio.isNotEmpty()) {
                         Text("Respaldo previo: ${res.rutaRespaldoPrevio}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
@@ -632,7 +655,7 @@ fun AjustesAvanzadosScreenContent(
             text = {
                 Column {
                     Text(
-                        text = "Se eliminarán permanentemente todos los productos, categorías, proveedores, ventas e historial, y todos los usuarios excepto tu cuenta de administrador actual.",
+                        text = "Se eliminarán productos, categorías, proveedores y ventas. Los usuarios no se eliminan.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))

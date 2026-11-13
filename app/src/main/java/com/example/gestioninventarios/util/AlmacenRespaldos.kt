@@ -59,10 +59,11 @@ class AlmacenRespaldos(private val context: Context) {
     }
 
     /**
-     * Guarda el JSON de respaldo ÚNICAMENTE en la carpeta raíz del dispositivo si el permiso está CONCEDIDO.
+     * Guarda el JSON de respaldo en streaming con verificación posterior antes de renombrar.
      */
-    fun guardarRespaldoJson(
-        jsonContenido: String,
+    fun guardarRespaldoJsonVerificado(
+        datos: RespaldoDatosExportar,
+        dbCounts: Map<String, Int>,
         prefijoNombre: String = "InventarioPYME",
         subcarpeta: String? = null,
         marcaTiempo: String? = null
@@ -93,9 +94,22 @@ class AlmacenRespaldos(private val context: Context) {
             val archivoFinal = File(carpetaDestino, nombreArchivo)
 
             try {
-                FileOutputStream(archivoTemp).use { out ->
-                    out.write(jsonContenido.toByteArray(Charsets.UTF_8))
-                    out.flush()
+                val fos = FileOutputStream(archivoTemp)
+                RespaldoJsonManager.exportarAStream(datos, fos)
+                fos.flush()
+                try {
+                    fos.fd.sync()
+                } catch (_: Exception) {}
+                fos.close()
+
+                // Verificación estricta antes de renombrar
+                val verificacion = RespaldoJsonManager.verificarArchivoTemporal(archivoTemp, dbCounts)
+                if (verificacion.isFailure) {
+                    if (archivoTemp.exists()) {
+                        archivoTemp.delete()
+                    }
+                    val ex = verificacion.exceptionOrNull() ?: IllegalStateException("El respaldo no quedó completo y no se guardó.")
+                    return Result.failure(ex)
                 }
 
                 if (archivoFinal.exists()) {
