@@ -472,15 +472,16 @@ class AjustesAvanzadosViewModel(
                         val codigoUnico = RespaldoJsonManager.obtenerSiguienteCodigoInterno(existingCatCodes)
                         existingCatCodes.add(codigoUnico)
 
-                        val newId = catDao.insertCategoria(
+                        val newId = (catDao.getMaxId() ?: 0) + 1
+                        catDao.insertCategoria(
                             CategoriaEntity(
-                                id = 0,
+                                id = newId,
                                 nombre = nombreUnico,
                                 descripcion = desc,
                                 activo = activo,
                                 codigo = codigoUnico
                             )
-                        ).toInt()
+                        )
                         mapCatId[oldId] = newId
                     }
 
@@ -501,9 +502,10 @@ class AjustesAvanzadosViewModel(
                         val codigoUnico = RespaldoJsonManager.obtenerSiguienteCodigoInterno(existingProvCodes)
                         existingProvCodes.add(codigoUnico)
 
-                        val newId = provDao.insertProveedor(
+                        val newId = (provDao.getMaxId() ?: 0) + 1
+                        provDao.insertProveedor(
                             ProveedorEntity(
-                                id = 0,
+                                id = newId,
                                 nombre = nombreUnico,
                                 contacto = contacto,
                                 telefono = tel,
@@ -511,7 +513,7 @@ class AjustesAvanzadosViewModel(
                                 activo = activo,
                                 codigo = codigoUnico
                             )
-                        ).toInt()
+                        )
                         mapProvId[oldId] = newId
                     }
 
@@ -548,9 +550,10 @@ class AjustesAvanzadosViewModel(
                         val newCatId = mapCatId[oldCatId] ?: 0
                         val newProvId = mapProvId[oldProvId] ?: 0
 
-                        val newId = prodDao.insertProducto(
+                        val newId = (prodDao.getMaxId() ?: 0) + 1
+                        prodDao.insertProducto(
                             ProductoEntity(
-                                id = 0,
+                                id = newId,
                                 codigoBarras = cbUnico,
                                 nombre = nombreFinal,
                                 precio = precio,
