@@ -50,7 +50,6 @@ data class AjustesAvanzadosUiState(
     val errorHumano: ErrorHumano? = null,
 
     val mostrarAvisoImportar: Boolean = false,
-    val mostrarDialogoFaltaAccesoImportar: Boolean = false,
     val respaldoValidado: RespaldoValidacionInfo? = null,
     val jsonImportarPendiente: String? = null,
     val resultadoImportacion: RespaldoResultadoImportacion? = null,
@@ -278,16 +277,10 @@ class AjustesAvanzadosViewModel(
     // ================= 2. IMPORTACIÓN =================
 
     fun solicitarImportacion() {
-        if (_uiState.value.estadoAcceso != EstadoPermisoAcceso.CONCEDIDO) {
-            _uiState.update { it.copy(mostrarDialogoFaltaAccesoImportar = true) }
-        } else {
+        if (_uiState.value.estadoAcceso == EstadoPermisoAcceso.CONCEDIDO) {
             almacenRespaldos.asegurarCarpetaExiste()
             _uiState.update { it.copy(mostrarAvisoImportar = true) }
         }
-    }
-
-    fun dismissDialogoFaltaAccesoImportar() {
-        _uiState.update { it.copy(mostrarDialogoFaltaAccesoImportar = false) }
     }
 
     fun dismissAvisoImportar() {
@@ -698,9 +691,7 @@ class AjustesAvanzadosViewModel(
     // ================= 3. ELIMINAR TODOS LOS DATOS =================
 
     fun solicitarEliminacion() {
-        if (_uiState.value.estadoAcceso != EstadoPermisoAcceso.CONCEDIDO) {
-            _uiState.update { it.copy(mostrarDialogoFaltaAccesoImportar = true) }
-        } else {
+        if (_uiState.value.estadoAcceso == EstadoPermisoAcceso.CONCEDIDO) {
             _uiState.update { it.copy(mostrarConfirmarEliminar = true) }
         }
     }

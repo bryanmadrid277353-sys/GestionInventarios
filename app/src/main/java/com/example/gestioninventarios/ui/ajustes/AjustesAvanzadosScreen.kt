@@ -170,7 +170,6 @@ fun AjustesAvanzadosScreen(
             openDocumentLauncher.launch(arrayOf("*/*"))
         },
         onDismissAvisoImportar = viewModel::dismissAvisoImportar,
-        onDismissDialogoFaltaAccesoImportar = viewModel::dismissDialogoFaltaAccesoImportar,
         onConfirmarImportar = viewModel::confirmarEjecutarImportacion,
         onDismissResumenImportar = viewModel::dismissResumenImportacion,
         onSolicitarEliminar = viewModel::solicitarEliminacion,
@@ -221,7 +220,6 @@ fun AjustesAvanzadosScreenContent(
     onSolicitarImportar: () -> Unit,
     onConfirmarAbrirDocumento: () -> Unit,
     onDismissAvisoImportar: () -> Unit,
-    onDismissDialogoFaltaAccesoImportar: () -> Unit,
     onConfirmarImportar: () -> Unit,
     onDismissResumenImportar: () -> Unit,
     onSolicitarEliminar: () -> Unit,
@@ -353,7 +351,7 @@ fun AjustesAvanzadosScreenContent(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         OutlinedButton(
-                            onClick = onSolicitarImportar,
+                            onClick = if (esConcedido) onSolicitarImportar else onSolicitarConcederAcceso,
                             enabled = !uiState.cargando,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -479,33 +477,6 @@ fun AjustesAvanzadosScreenContent(
             confirmButton = {
                 Button(onClick = onDismissExitoExportacion) {
                     Text("Aceptar")
-                }
-            }
-        )
-    }
-
-    // C) Diálogo de Falta Acceso para Importar
-    if (uiState.mostrarDialogoFaltaAccesoImportar) {
-        AlertDialog(
-            onDismissRequest = onDismissDialogoFaltaAccesoImportar,
-            title = { Text("Falta el acceso a archivos", fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    text = "Para importar un respaldo necesitas activar el acceso a archivos del dispositivo. Así se evita importar por error desde ubicaciones no controladas.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    onDismissDialogoFaltaAccesoImportar()
-                    onSolicitarConcederAcceso()
-                }) {
-                    Text("Conceder acceso")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = onDismissDialogoFaltaAccesoImportar) {
-                    Text("Cancelar")
                 }
             }
         )
