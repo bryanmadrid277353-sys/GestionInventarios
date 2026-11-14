@@ -330,7 +330,7 @@ fun PosTabContent(
                 if (uiState.sugerencias.isNotEmpty()) {
                     DropdownMenu(
                         expanded = true,
-                        onDismissRequest = viewModel::clearSearch,
+                        onDismissRequest = viewModel::dismissSugerencias,
                         properties = PopupProperties(focusable = false),
                         modifier = Modifier.fillMaxWidth(0.9f)
                     ) {

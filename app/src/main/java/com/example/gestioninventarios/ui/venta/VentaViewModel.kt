@@ -130,6 +130,10 @@ class VentaViewModel(
         _uiState.update { it.copy(searchQuery = "", sugerencias = emptyList()) }
     }
 
+    fun dismissSugerencias() {
+        _uiState.update { it.copy(sugerencias = emptyList()) }
+    }
+
     fun selectProductoDeSugerencia(prod: ProductoDto) {
         agregarAlCarrito(prod)
         clearSearch()
