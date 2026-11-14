@@ -61,21 +61,13 @@ class HomeViewModel(
                 _uiState.update { it.copy(userEmail = email ?: "") }
             }
         }
-        cargarKpis()
     }
 
     fun cargarKpis() {
         viewModelScope.launch {
             val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
-            val stockBajoRes = reporteRepository.obtenerStockBajo()
-            var countStockBajo = 0
-            if (stockBajoRes is Resource.Success && stockBajoRes.data != null) {
-                countStockBajo = stockBajoRes.data.size
-            } else {
-                val cached = productoRepository.getProductosFromCache()
-                countStockBajo = cached.count { it.stock <= it.stockMinimo }
-            }
+            val countStockBajo = reporteRepository.obtenerConteoStockBajo()
 
             val ventasRes = ventaRepository.listarVentas()
             var ventasHoyTotal = 0.0

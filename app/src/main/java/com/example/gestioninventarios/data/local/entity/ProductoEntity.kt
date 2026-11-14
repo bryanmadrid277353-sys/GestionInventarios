@@ -1,10 +1,19 @@
 package com.example.gestioninventarios.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.gestioninventarios.data.model.ProductoDto
 
-@Entity(tableName = "productos")
+@Entity(
+    tableName = "productos",
+    indices = [
+        Index(value = ["codigoBarras"], name = "index_productos_codigoBarras"),
+        Index(value = ["categoriaId"], name = "index_productos_categoriaId"),
+        Index(value = ["proveedorId"], name = "index_productos_proveedorId"),
+        Index(value = ["activo"], name = "index_productos_activo")
+    ]
+)
 data class ProductoEntity(
     @PrimaryKey val id: Int,
     val codigoBarras: String,

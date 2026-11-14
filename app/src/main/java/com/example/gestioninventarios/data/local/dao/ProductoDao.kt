@@ -7,10 +7,26 @@ import androidx.room.Query
 import androidx.room.Update
 import com.example.gestioninventarios.data.local.entity.ProductoEntity
 
+data class CategoriaCount(
+    val categoriaId: Int,
+    val count: Int
+)
+
+data class ProveedorCount(
+    val proveedorId: Int,
+    val count: Int
+)
+
 @Dao
 interface ProductoDao {
     @Query("SELECT * FROM productos WHERE activo = 1 ORDER BY nombre ASC")
     fun getProductos(): List<ProductoEntity>
+
+    @Query("SELECT * FROM productos WHERE activo = 1 AND stock <= stockMinimo ORDER BY nombre ASC")
+    fun getProductosStockBajo(): List<ProductoEntity>
+
+    @Query("SELECT COUNT(*) FROM productos WHERE activo = 1 AND stock <= stockMinimo")
+    fun getCountStockBajo(): Int
 
     @Query("SELECT * FROM productos ORDER BY id ASC")
     fun getAllProductos(): List<ProductoEntity>
@@ -32,6 +48,12 @@ interface ProductoDao {
 
     @Query("SELECT COUNT(*) FROM productos WHERE proveedorId = :proveedorId AND activo = 1")
     fun getCountByProveedor(proveedorId: Int): Int
+
+    @Query("SELECT categoriaId, COUNT(*) as count FROM productos WHERE activo = 1 GROUP BY categoriaId")
+    fun getConteosPorCategoria(): List<CategoriaCount>
+
+    @Query("SELECT proveedorId, COUNT(*) as count FROM productos WHERE activo = 1 GROUP BY proveedorId")
+    fun getConteosPorProveedor(): List<ProveedorCount>
 
     @Query("SELECT MAX(CAST(SUBSTR(codigoBarras, 6, 7) AS INTEGER)) FROM productos WHERE LENGTH(codigoBarras) = 13 AND SUBSTR(codigoBarras, 1, 5) = :prefijo AND activo = 1")
     fun getMaxConsecutivoByPrefijo(prefijo: String): Int?

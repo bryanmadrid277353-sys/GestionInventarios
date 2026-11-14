@@ -37,6 +37,14 @@ class ProductoRepository(
     private val categoriaDao: CategoriaDao,
     private val proveedorDao: ProveedorDao
 ) {
+    suspend fun obtenerConteosPorCategoria(): Map<Int, Int> = withContext(Dispatchers.IO) {
+        productoDao.getConteosPorCategoria().associate { it.categoriaId to it.count }
+    }
+
+    suspend fun obtenerConteosPorProveedor(): Map<Int, Int> = withContext(Dispatchers.IO) {
+        productoDao.getConteosPorProveedor().associate { it.proveedorId to it.count }
+    }
+
     suspend fun getProductosFromCache(search: String? = null, categoriaId: Int? = null): List<ProductoDto> = withContext(Dispatchers.IO) {
         val cached = productoDao.getProductos().map { it.toDto() }
         var filtered = cached

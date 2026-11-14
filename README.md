@@ -1,6 +1,6 @@
 # Inventario PyME 📦🛒
 
-**Inventario PyME** es una aplicación Android para la **gestión de inventario y ventas de pequeños negocios** (tiendas, pupuserías, ferreterías, cafeterías, minisúper). Funciona **100 % sin conexión**: todos los datos se guardan en el propio dispositivo con **SQLite (Room)**, por lo que no necesita servidor, internet ni configuración previa.
+**Inventario PyME** es una aplicación Android para la **gestión de inventario y ventas de pequeños negocios** (tiendas, pupuserías, ferreterías, cafeterías, minisúper). Funciona **100 % sin conexión**: todos los datos se guardan en el propio dispositivo con **SQLite (Room)**, por lo que no necesita servidor, internet ni configuración previa. Incluye **respaldos y traslado de datos**, control de acceso por **roles** y sesión con **cierre automático por inactividad**.
 
 > Proyecto final · Técnicas de Producción Industrial de Software · Universidad Tecnológica de El Salvador
 
@@ -30,8 +30,9 @@ Muchos pequeños negocios llevan su inventario en cuadernos o de memoria: no sab
 - Vende desde el celular **escaneando el código de barras** con la cámara.
 - **Descuenta el stock automáticamente** en cada venta.
 - **Alerta cuando un producto está por agotarse.**
-- Muestra **reportes de ventas** por semana, mes y trimestre.
+- Muestra **reportes de ventas** por semana, mes y 3 meses.
 - Separa lo que puede hacer el **administrador** de lo que puede hacer el **vendedor**.
+- **Protege la información** con respaldos, importación segura y cierre automático de sesión.
 
 ### Propuesta de valor
 
@@ -40,6 +41,7 @@ Muchos pequeños negocios llevan su inventario en cuadernos o de memoria: no sab
 | Sabe qué tiene, qué se vende y qué debe reponer | Cobra rápido: escanea, confirma y listo |
 | Controla quién vende y cuánto | Interfaz simple con solo lo que necesita |
 | Detecta faltantes antes de perder ventas | Evita errores de precio y de stock |
+| Respalda su negocio y lo traslada a otro teléfono | Su sesión se cierra sola si deja el teléfono |
 | No depende de internet ni de pagar un servicio | Funciona igual aunque no haya señal |
 
 ---
@@ -53,8 +55,9 @@ Desarrollar una aplicación Android que permita a pequeños negocios **controlar
 1. Implementar la gestión de productos, categorías y proveedores con **validaciones** que eviten datos inconsistentes.
 2. Registrar ventas con **escaneo de código de barras** y descuento automático e íntegro del stock.
 3. Generar **reportes y alertas** que apoyen la toma de decisiones (ventas por periodo, productos más vendidos, stock bajo).
-4. Controlar el acceso mediante **roles** (administrador y vendedor) y almacenamiento seguro de contraseñas.
-5. Construir una arquitectura **organizada y mantenible** (MVVM por capas) con una interfaz clara y usable.
+4. Controlar el acceso mediante **roles** (administrador y vendedor), contraseñas con hash y **cierre automático de sesión por inactividad**.
+5. Garantizar la **integridad y recuperación de los datos** mediante respaldos verificados, importación sin pérdida de información y confirmaciones en las acciones destructivas.
+6. Construir una arquitectura **organizada y mantenible** (MVVM por capas) con una interfaz clara, usable y adaptable a tema claro y oscuro.
 
 ---
 
@@ -62,7 +65,7 @@ Desarrollar una aplicación Android que permita a pequeños negocios **controlar
 
 **Misión.** Brindar a los pequeños negocios una herramienta móvil sencilla, gratuita y confiable que les permita organizar su inventario y sus ventas, para que dediquen su tiempo a atender a sus clientes y no a llevar cuentas a mano.
 
-**Visión.** Ser la solución de referencia para la administración de pequeños comercios en El Salvador, que crezca con ellos hacia reportes más completos, respaldo en la nube y multisucursal.
+**Visión.** Ser la solución de referencia para la administración de pequeños comercios en El Salvador, que crezca con ellos hacia reportes más completos, sincronización en la nube y multisucursal.
 
 **Valores.** Simplicidad · Confiabilidad de los datos · Accesibilidad (funciona sin internet) · Seguridad · Calidad de código.
 
@@ -81,8 +84,11 @@ Desarrollar una aplicación Android que permita a pequeños negocios **controlar
 
 ## ✨ Funcionalidades
 
-### 🔐 Acceso y roles
-- Inicio de sesión local con usuario y contraseña (almacenada como **hash**, nunca en texto plano).
+### 🔐 Acceso, roles y sesión
+- Inicio de sesión local con correo y contraseña (almacenada como **hash**, nunca en texto plano).
+- **El correo no se guarda ni se rellena**: cada vez que aparece el login, los campos están vacíos.
+- **Cierre automático de sesión:** si la app permanece cerrada o en segundo plano más de **10 minutos**, la sesión expira y se piden de nuevo correo y contraseña. Mientras se usa la app no se cierra sola.
+- Al **cerrar sesión** (manual o automática) se limpia todo lo del usuario anterior y el botón «atrás» no regresa a pantallas protegidas.
 - Menú de inicio distinto según el rol: el vendedor solo ve lo que necesita para vender.
 - Resumen del día en el inicio (ventas de hoy, número de ventas, productos con stock bajo).
 
@@ -90,8 +96,9 @@ Desarrollar una aplicación Android que permita a pequeños negocios **controlar
 - Búsqueda de productos por **nombre o código de barras**, o escaneo con la cámara.
 - Carrito dinámico con control de cantidad y **validación de stock disponible**.
 - Quitar un producto con opción de **Deshacer**.
+- Barra de total y cobro siempre visible, adaptada a los botones de navegación del dispositivo.
 - Confirmación de venta **transaccional**: o se guarda todo (venta, detalle y descuento de stock) o no se guarda nada.
-- **Historial de ventas** con detalle y filtro por vendedor.
+- **Historial de ventas** agrupado por día, con detalle. El administrador puede **filtrar por vendedor**.
 
 ### 📷 Escáner de código de barras
 - **CameraX + ML Kit**: lectura instantánea, solo de formatos de producto, sin lecturas duplicadas.
@@ -100,9 +107,10 @@ Desarrollar una aplicación Android que permita a pequeños negocios **controlar
 
 ### 📦 Productos
 - Alta, edición y eliminación con confirmación.
-- Búsqueda, resaltado de **stock bajo** por colores (normal / bajo / agotado).
+- **Filtros** en una sola fila: orden (nombre, stock, precio), **solo stock bajo** y categorías, combinables entre sí, además de la búsqueda por nombre o código.
+- Resaltado de **stock** por colores (normal / bajo / agotado).
 - **Vista previa del código de barras** del producto, con opción de copiarlo, para verificación.
-- Formulario organizado por secciones: identificación, precios, inventario y clasificación.
+- Formulario organizado por secciones: identificación, precios (con margen calculado), inventario y clasificación.
 - El **costo** solo es visible para el administrador.
 
 ### 🏷️ Código de barras interno (productos sin código de fábrica)
@@ -133,6 +141,50 @@ Ejemplo: `2 01 01 0000001 3` → categoría 01, proveedor 01, producto n.º 1. L
 - Alta de nuevos usuarios con rol y contraseña segura.
 - Desactivación y reactivación de usuarios.
 
+### ⚙️ Ajustes
+- **Apariencia:** tema **Claro**, **Oscuro** o **Automático** (según el sistema). Se aplica al instante y se recuerda al reabrir la app.
+- **Ajustes avanzados** (visible solo para el administrador): respaldos y manejo de datos.
+- Información de la app.
+
+### 💾 Respaldos y datos (Ajustes avanzados · solo administrador)
+
+**Acceso a archivos.** Una tarjeta de estado indica si el permiso está activo. Exportar, importar y eliminar solo funcionan con el acceso concedido, para que nunca se modifiquen datos sin una copia de seguridad. El botón *Conceder acceso* guía paso a paso hasta la configuración del sistema.
+
+**Exportar respaldo**
+- Genera un archivo **JSON** con categorías, proveedores, productos, ventas y detalle de ventas.
+- Se guarda **automáticamente** en `Inventario PYME › Respaldos de Datos`, sin elegir carpeta.
+- **Verificación de integridad:** antes de guardar se comprueba que el archivo esté completo (los conteos de cada tabla deben coincidir). Un respaldo incompleto nunca se conserva.
+- Al terminar muestra la ruta y la cantidad de registros exportados.
+
+**Importar respaldo**
+- Todos los registros entran como **NUEVOS**, **por encima de los existentes**: no se modifica ni se elimina ningún dato, y no se comparan duplicados.
+- Un aviso previo lo explica y el selector se abre directamente en la carpeta *Respaldos de Datos*.
+- Se valida el archivo completo antes de escribir y la inserción es **atómica** (entra todo o no entra nada).
+- Si un dato con valor único ya existe (código de barras, nombre de categoría), el importado se renombra con el sufijo *(importado)* para no rechazar la importación.
+- Las ventas importadas **no modifican el stock**; se asignan por **correo** al vendedor que exista en el dispositivo o, si no existe, al administrador actual.
+- Se guardan dos **copias automáticas** (antes y después) en `Respaldos de Datos › Otros`.
+
+**Eliminar todos los datos**
+- Se ubica en una **zona de peligro** al final de la pantalla.
+- Su botón de confirmación se habilita solo tras una **carga de 3 segundos**, para evitar borrados accidentales.
+- Antes de borrar se crea una copia automática en `Otros`.
+- Elimina productos, categorías, proveedores y ventas. **Los usuarios no se eliminan.**
+
+> **Los usuarios no forman parte de los respaldos:** no se exportan ni se importan, así no se duplica al administrador. En un teléfono nuevo se crean a mano.
+
+#### Dónde quedan los archivos
+
+```
+Almacenamiento interno/
+└── Inventario PYME/
+    └── Respaldos de Datos/
+        ├── InventarioPYME_AAAA-MM-DD_HH-mm-ss.json            ← exportaciones manuales
+        └── Otros/                                               ← copias automáticas
+            ├── InventarioPYME_previo-a-importar_<fecha>.json
+            ├── InventarioPYME_posterior-a-importar_<fecha>.json
+            └── InventarioPYME_previo-a-eliminar_<fecha>.json
+```
+
 ---
 
 ## 🔑 Permisos por rol
@@ -146,6 +198,8 @@ Ejemplo: `2 01 01 0000001 3` → categoría 01, proveedor 01, producto n.º 1. L
 | Catálogos (categorías y proveedores) | ✅ | ❌ |
 | Reportes y estadísticas | ✅ | ❌ |
 | Gestión de usuarios | ✅ | ❌ |
+| Ajustes (tema) | ✅ | ✅ |
+| Ajustes avanzados (respaldos y datos) | ✅ | ❌ |
 
 ---
 
@@ -161,6 +215,9 @@ Ejemplo: `2 01 01 0000001 3` → categoría 01, proveedor 01, producto n.º 1. L
 | Base de datos | **Room sobre SQLite** | Almacenamiento local, relaciones y transacciones |
 | Cámara | **CameraX** | Vista previa y análisis de imagen |
 | Códigos de barras | **ML Kit Barcode Scanning** · **ZXing** | Lectura con cámara y dibujo del código en la vista previa |
+| Respaldos | **JSON (lectura y escritura en streaming)** · **API de archivos de Android** | Exportación e importación con verificación de integridad |
+| Selector de archivos | **Storage Access Framework** (`OpenDocument`) | Elegir el respaldo a importar |
+| Sesión | **ProcessLifecycleOwner** + preferencias locales | Detectar cuánto tiempo estuvo la app fuera y expirar la sesión |
 | Seguridad | **Hash de contraseñas** | Credenciales nunca guardadas en texto plano |
 | Compilación | **Gradle (Kotlin DSL) + KSP** | Construcción y procesamiento de Room |
 
@@ -184,7 +241,7 @@ Ejemplo: `2 01 01 0000001 3` → categoría 01, proveedor 01, producto n.º 1. L
 └───────────────────┬─────────────────────────┘
                     │ funciones suspend · Flow
 ┌───────────────────▼─────────────────────────┐
-│  Repositorio                                │  Reglas de negocio y transacciones (ventas)
+│  Repositorio · Almacén de respaldos         │  Reglas de negocio, transacciones y respaldos
 └───────────────────┬─────────────────────────┘
                     │ DAOs
 ┌───────────────────▼─────────────────────────┐
@@ -199,13 +256,13 @@ app/src/main/java/com/utec/inventario/
 ├── InventarioApp.kt · MainActivity.kt
 ├── data/
 │   ├── local/          Entidades, DAOs y AppDatabase (Room)
-│   └── repository/     Repositorio con reglas de negocio
+│   └── repository/     Repositorio con reglas de negocio y manejo de respaldos
 ├── ui/
 │   ├── navigation/     Rutas y NavGraph
-│   ├── theme/          Colores, formas y tema
-│   ├── components/     Elementos reutilizables (tarjetas, chips, diálogos)
-│   └── login · home · venta · productos · maestros · reportes · usuarios · scanner
-└── util/               Validaciones, hash, código de barras interno, rangos de fechas
+│   ├── theme/          Colores, formas y tema claro/oscuro
+│   ├── components/     Elementos reutilizables (tarjetas, chips, diálogos, AppScaffold)
+│   └── login · home · venta · productos · maestros · reportes · usuarios · scanner · ajustes
+└── util/               Validaciones, hash, código de barras interno, rangos de fechas, sesión
 ```
 
 ### Modelo de datos
@@ -265,6 +322,7 @@ erDiagram
 
 ## ✅ Reglas de negocio y validaciones
 
+**Inventario y ventas**
 - El **código de barras** es único; no se aceptan duplicados.
 - El **precio** debe ser mayor a 0 y no puede ser menor al costo; el **stock** no puede ser negativo.
 - Nombre, correo y teléfono se validan por formato antes de guardar.
@@ -272,8 +330,14 @@ erDiagram
 - La venta es **atómica**: si algo falla, no se guarda nada y el stock queda intacto.
 - Un producto con ventas registradas no se puede eliminar.
 - Las categorías y proveedores con productos asociados no se pueden eliminar.
-- Las acciones destructivas piden confirmación.
-- Las funciones de administración se bloquean para el rol vendedor.
+
+**Seguridad y datos**
+- Las funciones de administración se bloquean para el rol vendedor, tanto en la interfaz como en la lógica.
+- La sesión expira tras 10 minutos de inactividad fuera de la app.
+- Las acciones destructivas piden confirmación; **eliminar todos los datos** exige además una espera de 3 segundos.
+- Exportar, importar y eliminar requieren el acceso a archivos concedido y crean antes una copia de seguridad.
+- Un respaldo se guarda solo si pasa la verificación de integridad.
+- Importar nunca modifica ni elimina datos existentes y es todo-o-nada.
 
 ---
 
@@ -310,7 +374,18 @@ La base de datos se crea sola la primera vez con usuarios, categorías, proveedo
 ```
 
 ### Permisos
-- `CAMERA`: únicamente para escanear códigos de barras.
+| Permiso | Para qué |
+| :--- | :--- |
+| `CAMERA` | Escanear códigos de barras |
+| Acceso a todos los archivos (`MANAGE_EXTERNAL_STORAGE`, Android 11+) · almacenamiento (`WRITE_EXTERNAL_STORAGE`, Android 10 o menos) | Guardar y leer respaldos en `Inventario PYME › Respaldos de Datos` |
+
+La app **no usa internet**.
+
+### Cómo activar el acceso a archivos (para respaldos)
+1. Entra como **administrador** → **Ajustes** → **Ajustes avanzados**.
+2. Pulsa **Conceder acceso** y luego **Continuar**.
+3. En la configuración del sistema busca **Inventario PyME** y activa el permiso de acceso a todos los archivos.
+4. Regresa a la app: la tarjeta cambia a *«Acceso a archivos activado»*.
 
 ---
 
@@ -318,39 +393,48 @@ La base de datos se crea sola la primera vez con usuarios, categorías, proveedo
 
 | Tiempo | Qué mostrar | Qué explicar |
 | :---: | :--- | :--- |
-| 0:00–1:00 | Pantalla de inicio de sesión | Problema, objetivo, misión y visión |
-| 1:00–2:00 | Android Studio y la app | **Entorno:** SDK mínimo (API 24), permisos, tecnologías |
-| 2:00–3:00 | Estructura del proyecto y diagrama ER | MVVM por capas y cómo se relacionan los datos |
-| 3:00–4:00 | Login como Admin y como Vendedor | Roles y diferencias en el menú |
-| 4:00–5:30 | Productos y catálogos | CRUD, validaciones, código interno y vista previa |
-| 5:30–7:30 | Punto de venta | Escáner, carrito, deshacer, confirmar y descuento de stock |
-| 7:30–8:30 | Historial y reportes | Cómo los datos de la venta alimentan los reportes |
-| 8:30–9:15 | Usuarios y **modo avión** | Funciona sin conexión; seguridad local |
+| 0:00–0:45 | Pantalla de inicio de sesión | Problema, objetivo, misión y visión |
+| 0:45–1:45 | Android Studio y la app | **Entorno:** SDK mínimo (API 24), permisos, tecnologías |
+| 1:45–2:30 | Estructura del proyecto y diagrama ER | MVVM por capas y cómo se relacionan los datos |
+| 2:30–3:15 | Login como Admin y como Vendedor | Roles y diferencias en el menú |
+| 3:15–4:30 | Productos y catálogos | CRUD, filtros, validaciones, código interno y vista previa |
+| 4:30–6:30 | Punto de venta | Escáner, carrito, deshacer, confirmar y descuento de stock |
+| 6:30–7:15 | Historial y reportes | Cómo los datos de la venta alimentan los reportes |
+| 7:15–8:30 | **Ajustes**: tema y respaldos | Cambio de tema; exportar, importar (registros nuevos) y eliminar con espera de 3 s |
+| 8:30–9:15 | Cierre de sesión y **modo avión** | Sesión por inactividad, login sin datos guardados, funciona sin conexión |
 | 9:15–10:00 | Conclusiones | Aportes, limitaciones y mejoras futuras |
+
+> Para demostrar la **expiración de sesión** sin esperar 10 minutos, puedes mostrarlo en el código (constante de tiempo) o grabarlo con antelación.
 
 ### Mapa de la rúbrica
 
 | Criterio | Dónde se evidencia |
 | :--- | :--- |
-| Entorno de la aplicación Android | Sección *Tecnologías* y *Instalación*; minuto 1:00 del video |
+| Entorno de la aplicación Android | Secciones *Tecnologías*, *Permisos* e *Instalación*; minuto 0:45 del video |
 | Presentación en video | Guion anterior, con demostración de cada módulo |
-| Funcionalidad del proyecto | Reglas de negocio, roles, escáner, reportes, validaciones adicionales |
+| Funcionalidad del proyecto | Reglas de negocio, roles, escáner, reportes, respaldos y validaciones adicionales |
 | Contenido del documento | Este README, diagrama ER, capturas por módulo y manual de usuario |
+| Bonificación (uso creativo) | Código de barras EAN-13 interno, respaldos verificados, importación sin pérdida de datos, sesión por inactividad y tema claro/oscuro |
 
 ### Preguntas frecuentes de la defensa
 
 - **¿Por qué SQLite y no un servidor?** Porque el público objetivo trabaja muchas veces sin conexión estable; así se gana velocidad, privacidad y sencillez.
 - **¿Cómo se asegura que una venta no deje el stock inconsistente?** Con una transacción de Room: valida el stock, guarda la venta y el detalle, y descuenta; si algo falla, se revierte todo.
-- **¿Cómo se protege la información?** Las contraseñas se guardan con hash y las funciones administrativas se validan por rol; los datos permanecen en el dispositivo.
-- **¿Qué pasa si se desinstala la app?** Los datos locales se pierden. La mejora prevista es una copia de seguridad.
+- **¿Cómo se protege la información?** Contraseñas con hash, funciones administrativas validadas por rol, cierre automático de sesión y datos que nunca salen del dispositivo.
+- **¿Qué pasa si se desinstala la app?** La base de datos local se pierde, pero los respaldos guardados en la carpeta `Inventario PYME` permanecen y se pueden importar.
+- **¿Se pueden pasar los datos a otro teléfono?** Sí: se exporta un respaldo, se copia el archivo y se importa en el otro dispositivo. Es un **traslado manual**, no una sincronización automática.
+- **¿Por qué importar duplica los registros?** Es una decisión de diseño para **evitar a toda costa la pérdida de datos**: no se compara ni se sobrescribe nada, y antes y después de importar se guardan copias automáticas.
+- **¿Por qué los usuarios no se exportan?** Para no duplicar al administrador ni mover contraseñas entre dispositivos. Las ventas importadas se asignan por correo al vendedor existente.
+- **¿Por qué pide acceso a todos los archivos?** Para guardar los respaldos en una carpeta visible y permanente (`Inventario PYME`) que sobreviva a la desinstalación.
 - **¿Qué es el código de barras interno?** Un EAN-13 válido con prefijo de uso interno que codifica categoría, proveedor y consecutivo, para productos que no traen código.
 
 ---
 
 ## 🔭 Limitaciones y trabajo futuro
 
-- Los datos viven en **un solo dispositivo**: no hay sincronización entre varios celulares.
-- Respaldo y restauración de la base de datos.
+- Los datos viven en **un solo dispositivo**: el traslado entre teléfonos es manual, sin sincronización automática.
+- Importación inteligente que **fusione** registros y detecte duplicados.
+- Pantalla de **perfil** de usuario con cambio de contraseña y estadísticas personales.
 - Exportación de reportes a PDF o CSV e impresión de tickets.
 - Sincronización con la nube y panel web (arquitectura cliente-servidor).
 - Soporte multisucursal, descuentos y promociones.

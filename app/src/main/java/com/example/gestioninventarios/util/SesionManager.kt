@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 class SesionManager(
     private val context: Context,
@@ -37,7 +36,7 @@ class SesionManager(
     }
 
     fun registrarActividad() {
-        prefs.edit().putLong(KEY_ULTIMA_ACTIVIDAD, System.currentTimeMillis()).commit()
+        prefs.edit().putLong(KEY_ULTIMA_ACTIVIDAD, System.currentTimeMillis()).apply()
     }
 
     override fun onStart(owner: LifecycleOwner) {
@@ -51,28 +50,30 @@ class SesionManager(
     }
 
     fun verificarExpiracion() {
-        val isLoggedIn = runBlocking { tokenStore.isLoggedIn.first() }
-        if (!isLoggedIn) return
+        CoroutineScope(Dispatchers.IO).launch {
+            val isLoggedIn = tokenStore.isLoggedIn.first()
+            if (!isLoggedIn) return@launch
 
-        val ahora = System.currentTimeMillis()
-        val ultimaActividad = prefs.getLong(KEY_ULTIMA_ACTIVIDAD, 0L)
+            val ahora = System.currentTimeMillis()
+            val ultimaActividad = prefs.getLong(KEY_ULTIMA_ACTIVIDAD, 0L)
 
-        if (ultimaActividad > 0L) {
-            val diff = ahora - ultimaActividad
-            if (diff > SesionConfig.TIEMPO_SESION_INACTIVA_MS || diff < 0L) {
-                cerrarSesion("Tu sesión expiró por inactividad. Inicia sesión nuevamente.")
+            if (ultimaActividad > 0L) {
+                val diff = ahora - ultimaActividad
+                if (diff > SesionConfig.TIEMPO_SESION_INACTIVA_MS || diff < 0L) {
+                    cerrarSesion("Tu sesión expiró por inactividad. Inicia sesión nuevamente.")
+                } else {
+                    registrarActividad()
+                }
             } else {
                 registrarActividad()
             }
-        } else {
-            registrarActividad()
         }
     }
 
     fun cerrarSesion(motivo: String? = null) {
         CoroutineScope(Dispatchers.IO).launch {
             tokenStore.clearSession()
-            prefs.edit().clear().commit()
+            prefs.edit().clear().apply()
             _expirationEvent.emit(motivo ?: "Sesión cerrada")
         }
     }

@@ -169,15 +169,8 @@ class CatalogosViewModel(
     }
 
     private suspend fun cargarConteosProductos() {
-        val prodsRes = productoRepository.listarProductos()
-        val prods = if (prodsRes is Resource.Success && prodsRes.data != null) {
-            prodsRes.data
-        } else {
-            productoRepository.getProductosFromCache()
-        }
-
-        val catCounts = prods.groupBy { it.categoriaId }.mapValues { it.value.size }
-        val provCounts = prods.groupBy { it.proveedorId }.mapValues { it.value.size }
+        val catCounts = productoRepository.obtenerConteosPorCategoria()
+        val provCounts = productoRepository.obtenerConteosPorProveedor()
 
         _uiState.update {
             it.copy(

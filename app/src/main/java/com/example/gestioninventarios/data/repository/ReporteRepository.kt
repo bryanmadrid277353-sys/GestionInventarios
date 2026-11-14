@@ -45,9 +45,17 @@ class ReporteRepository(
         }
     }
 
+    suspend fun obtenerConteoStockBajo(): Int = withContext(Dispatchers.IO) {
+        try {
+            productoDao.getCountStockBajo()
+        } catch (e: Exception) {
+            0
+        }
+    }
+
     suspend fun obtenerStockBajo(): Resource<List<ReporteStockBajoDto>> = withContext(Dispatchers.IO) {
         try {
-            val prods = productoDao.getProductos().filter { it.stock <= it.stockMinimo }
+            val prods = productoDao.getProductosStockBajo()
             val reporte = prods.map { prod ->
                 ReporteStockBajoDto(
                     id = prod.id,

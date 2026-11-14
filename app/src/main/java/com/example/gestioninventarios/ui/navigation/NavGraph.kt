@@ -1,9 +1,14 @@
 package com.example.gestioninventarios.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -39,7 +44,18 @@ fun NavGraph(
     navController: NavHostController,
     appContainer: AppContainer
 ) {
-    val isLoggedIn by appContainer.authRepository.isLoggedIn.collectAsState(initial = false)
+    val isLoggedInState by appContainer.authRepository.isLoggedIn.collectAsState(initial = null)
+    if (isLoggedInState == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val isLoggedIn = isLoggedInState == true
     val startDestination = if (isLoggedIn) Screen.Home.route else Screen.Login.route
 
     val factory = ViewModelFactory(appContainer)
@@ -91,9 +107,6 @@ fun NavGraph(
 
         composable(Screen.Productos.route) {
             val productosViewModel: ProductosViewModel = viewModel(factory = factory)
-            LaunchedEffect(Unit) {
-                productosViewModel.cargarProductos(isRefresh = true)
-            }
             ProductosScreen(
                 viewModel = productosViewModel,
                 onNavigateToCreateProduct = { navController.navigate(Screen.ProductoForm.createRoute()) },

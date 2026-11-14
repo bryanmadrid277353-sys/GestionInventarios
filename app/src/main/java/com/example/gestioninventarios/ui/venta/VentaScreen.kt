@@ -83,6 +83,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.example.gestioninventarios.data.model.ProductoDto
 import com.example.gestioninventarios.data.model.VentaResponseDto
 import com.example.gestioninventarios.ui.components.AppScaffold
@@ -330,6 +331,7 @@ fun PosTabContent(
                     DropdownMenu(
                         expanded = true,
                         onDismissRequest = viewModel::clearSearch,
+                        properties = PopupProperties(focusable = false),
                         modifier = Modifier.fillMaxWidth(0.9f)
                     ) {
                         uiState.sugerencias.forEach { prod ->

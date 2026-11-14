@@ -84,6 +84,15 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_productos_codigoBarras ON productos (codigoBarras)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_productos_categoriaId ON productos (categoriaId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_productos_proveedorId ON productos (proveedorId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_productos_activo ON productos (activo)")
+    }
+}
+
 @Database(
     entities = [
         ProductoEntity::class,
@@ -93,7 +102,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         VentaEntity::class,
         DetalleVentaEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -115,7 +124,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "inventario_pyme_db"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -134,11 +143,11 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private fun seedInitialData(db: AppDatabase, context: Context) {
-            val prefManager = PreferenciasManager(context)
-            if (prefManager.isDatosSembrados()) {
-                return
-            }
             CoroutineScope(Dispatchers.IO).launch {
+                val prefManager = PreferenciasManager(context)
+                if (prefManager.isDatosSembrados()) {
+                    return@launch
+                }
                 try {
                     val usrDao = db.usuarioDao()
                     if (usrDao.getUsuarios().isEmpty()) {
