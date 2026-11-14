@@ -22,13 +22,17 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +63,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -283,6 +290,7 @@ fun ProductosScreen(
                                 producto = prod,
                                 isAdmin = isAdmin,
                                 onShowBarcode = { selectedBarcodeProduct = prod },
+                                onAddStock = { viewModel.promptAddStock(prod) },
                                 onEdit = { onNavigateToEditProduct(prod.id) },
                                 onDelete = { viewModel.promptDelete(prod.id, prod.nombre) }
                             )
@@ -297,6 +305,16 @@ fun ProductosScreen(
         VistaPreviaCodigoBarrasDialog(
             producto = prod,
             onDismiss = { selectedBarcodeProduct = null }
+        )
+    }
+
+    uiState.addStockProduct?.let { prod ->
+        AnadirStockDialog(
+            producto = prod,
+            cantidadText = uiState.addStockQuantityText,
+            onCantidadChange = viewModel::onAddStockQuantityChanged,
+            onConfirmar = viewModel::confirmAddStock,
+            onDismiss = viewModel::closeAddStockDialog
         )
     }
 
@@ -317,6 +335,7 @@ fun ProductoCardItem(
     producto: ProductoDto,
     isAdmin: Boolean,
     onShowBarcode: () -> Unit,
+    onAddStock: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -375,6 +394,13 @@ fun ProductoCardItem(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false }
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("Añadir Stock") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onAddStock()
+                                    }
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Editar") },
                                     onClick = {
@@ -557,9 +583,115 @@ fun ProductoCardItemPreview() {
                 ),
                 isAdmin = true,
                 onShowBarcode = {},
+                onAddStock = {},
                 onEdit = {},
                 onDelete = {}
             )
         }
     }
+}
+
+@Composable
+fun AnadirStockDialog(
+    producto: ProductoDto,
+    cantidadText: String,
+    onCantidadChange: (String) -> Unit,
+    onConfirmar: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val cantidadVal = cantidadText.toIntOrNull() ?: 0
+    val nuevoStockCalculado = producto.stock + cantidadVal
+    val esValido = cantidadVal > 0
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.AddCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Añadir Stock", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = producto.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Stock actual: ${producto.stock} unidades",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = cantidadText,
+                    onValueChange = { input ->
+                        if (input.all { it.isDigit() }) {
+                            onCantidadChange(input)
+                        }
+                    },
+                    label = { Text("Cantidad a añadir") },
+                    placeholder = { Text("Ejemplo: 10") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (esValido) onConfirmar()
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Nuevo stock total:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "$nuevoStockCalculado unidades",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirmar,
+                enabled = esValido
+            ) {
+                Text("Añadir")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

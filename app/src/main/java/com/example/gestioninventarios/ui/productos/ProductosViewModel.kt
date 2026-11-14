@@ -64,7 +64,10 @@ data class ProductosUiState(
     val showDeleteDialog: Boolean = false,
     val deleteProductId: Int? = null,
     val deleteProductName: String = "",
-    val showUnsavedChangesDialog: Boolean = false
+    val showUnsavedChangesDialog: Boolean = false,
+
+    val addStockProduct: ProductoDto? = null,
+    val addStockQuantityText: String = ""
 )
 
 class ProductosViewModel(
@@ -408,9 +411,56 @@ class ProductosViewModel(
         }
     }
 
+    fun promptAddStock(prod: ProductoDto) {
+        _uiState.update {
+            it.copy(addStockProduct = prod, addStockQuantityText = "")
+        }
+    }
+
+    fun onAddStockQuantityChanged(text: String) {
+        val filtered = text.filter { it.isDigit() }
+        _uiState.update {
+            it.copy(addStockQuantityText = filtered)
+        }
+    }
+
+    fun confirmAddStock() {
+        val prod = _uiState.value.addStockProduct ?: return
+        val cant = _uiState.value.addStockQuantityText.toIntOrNull() ?: return
+        if (cant <= 0) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, addStockProduct = null, addStockQuantityText = "") }
+            val res = productoRepository.addStock(prod.id, cant)
+            when (res) {
+                is Resource.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    cargarProductos()
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = res.message) }
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun closeAddStockDialog() {
+        _uiState.update {
+            it.copy(addStockProduct = null, addStockQuantityText = "")
+        }
+    }
+
     fun closeDialogs() {
         _uiState.update {
-            it.copy(showProductBottomSheet = false, showDeleteDialog = false, showUnsavedChangesDialog = false, errorMessage = null)
+            it.copy(
+                showProductBottomSheet = false,
+                showDeleteDialog = false,
+                showUnsavedChangesDialog = false,
+                addStockProduct = null,
+                addStockQuantityText = "",
+                errorMessage = null
+            )
         }
     }
 }

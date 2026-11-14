@@ -166,6 +166,19 @@ class ProductoRepository(
         }
     }
 
+    suspend fun addStock(id: Int, cantidadAnadir: Int): Resource<ProductoDto> = withContext(Dispatchers.IO) {
+        try {
+            val existing = productoDao.getProductoById(id)
+                ?: return@withContext Resource.Error("Producto no encontrado")
+            val nuevoStock = existing.stock + cantidadAnadir
+            productoDao.updateStock(id, nuevoStock)
+            val updated = existing.copy(stock = nuevoStock)
+            Resource.Success(updated.toDto())
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Error al añadir stock al producto")
+        }
+    }
+
     suspend fun eliminarProducto(id: Int): Resource<Unit> = withContext(Dispatchers.IO) {
         try {
             productoDao.softDeleteProducto(id)
