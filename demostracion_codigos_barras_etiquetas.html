@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etiquetas de Góndola - Códigos de Barras EAN-13</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .tag-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+            .tag-item { break-inside: avoid; border: 2px solid #000 !important; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-5xl mx-auto mb-6 flex flex-wrap justify-between items-center no-print">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Etiquetas de Estante con Código de Barras EAN-13</h1>
+            <p class="text-slate-600 text-sm">Formato optimizado para impresión de etiquetas de precio y escaneo con la app.</p>
+        </div>
+        <div class="flex gap-3 mt-3 sm:mt-0">
+            <a href="demostracion_codigos_barras_catalogo.html" class="bg-slate-700 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-lg text-sm transition">Ver Catálogo</a>
+            <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Imprimir Etiquetas
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenedor de Etiquetas -->
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 tag-grid" id="grid-etiquetas">
+        <!-- Renderizado dinámico -->
+    </div>
+
+    <script>
+        const productos = [
+            { id: 1, codigo: "2010100000013", nombre: "Coca-Cola 600ml", precio: 1.25, categoria: "Bebidas" },
+            { id: 2, codigo: "2010100000020", nombre: "Agua Ciel 1.5L", precio: 0.80, categoria: "Bebidas" },
+            { id: 3, codigo: "2010100000037", nombre: "Jugo del Valle Naranja 1L", precio: 1.50, categoria: "Bebidas" },
+            { id: 4, codigo: "2020200000011", nombre: "Arroz Extra 1kg", precio: 1.40, categoria: "Abarrotes" },
+            { id: 5, codigo: "2020200000028", nombre: "Frijol Negro 1kg", precio: 1.75, categoria: "Abarrotes" },
+            { id: 6, codigo: "2020200000035", nombre: "Aceite Vegetal 900ml", precio: 2.25, categoria: "Abarrotes" },
+            { id: 7, codigo: "2020200000042", nombre: "Azúcar Estándar 1kg", precio: 1.50, categoria: "Abarrotes" },
+            { id: 8, codigo: "2030100000011", nombre: "Detergente Multiusos 1kg", precio: 1.90, categoria: "Limpieza" },
+            { id: 9, codigo: "2030100000028", nombre: "Jabón para Trastes 750ml", precio: 1.60, categoria: "Limpieza" },
+            { id: 10, codigo: "2030100000035", nombre: "Cloro Limpiador 1L", precio: 0.85, categoria: "Limpieza" }
+        ];
+
+        window.onload = () => {
+            const container = document.getElementById('grid-etiquetas');
+            container.innerHTML = '';
+
+            productos.forEach(prod => {
+                const tagHtml = `
+                    <div class="tag-item bg-white border-2 border-slate-900 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+                        <div class="flex justify-between items-center border-b pb-2 mb-3">
+                            <h2 class="font-bold text-lg text-slate-900 leading-tight">${prod.nombre}</h2>
+                            <span class="bg-slate-900 text-white font-black text-xl px-3 py-1 rounded-lg ml-2">$${prod.precio.toFixed(2)}</span>
+                        </div>
+
+                        <div class="flex flex-col items-center justify-center bg-slate-50 p-2 rounded-lg border">
+                            <svg id="barcode-${prod.id}" class="w-full h-20"></svg>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-3 pt-2 border-t text-[11px] text-slate-500 font-medium">
+                            <span>Categoría: <strong>${prod.categoria}</strong></span>
+                            <span>Gestión Inventarios PYME</span>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += tagHtml;
+            });
+
+            // Generar códigos de barras con try/catch seguro
+            productos.forEach(prod => {
+                try {
+                    JsBarcode(`#barcode-${prod.id}`, prod.codigo, {
+                        format: "EAN13",
+                        height: 50,
+                        width: 2,
+                        fontSize: 13,
+                        margin: 2,
+                        displayValue: true
+                    });
+                } catch (e) {
+                    JsBarcode(`#barcode-${prod.id}`, prod.codigo, {
+                        format: "CODE128",
+                        height: 50,
+                        width: 2,
+                        fontSize: 13,
+                        margin: 2,
+                        displayValue: true
+                    });
+                }
+            });
+        };
+    </script>
+</body>
+</html>

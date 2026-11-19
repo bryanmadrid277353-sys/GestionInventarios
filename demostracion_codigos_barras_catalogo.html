@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demostración de Inventario - Catálogo de Códigos de Barras EAN-13</title>
+    <!-- Tailwind CSS CDN para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JsBarcode para renderizado vectorial de códigos de barras EAN-13 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+            .card-item { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+
+    <!-- Encabezado -->
+    <header class="max-w-7xl mx-auto mb-8 text-center no-print">
+        <div class="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-semibold mb-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+            Demostración de Gestión de Inventarios
+        </div>
+        <h1 class="text-3xl md:text-5xl font-extrabold text-white tracking-tight">Catálogo de Códigos de Barras EAN-13</h1>
+        <p class="text-slate-400 mt-2 max-w-2xl mx-auto">
+            Escanea estos códigos de barras directamente con la cámara de la aplicación móvil. Todos corresponden a la base de datos oficial del sistema.
+        </p>
+
+        <!-- Filtros y Controles -->
+        <div class="mt-6 flex flex-wrap justify-center gap-3 no-print">
+            <button onclick="filtrarCategoria('TODOS')" class="btn-filter bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition" id="btn-TODOS">Todos (10)</button>
+            <button onclick="filtrarCategoria('Bebidas')" class="btn-filter bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-lg transition border border-slate-700" id="btn-Bebidas">🥤 Bebidas (3)</button>
+            <button onclick="filtrarCategoria('Abarrotes')" class="btn-filter bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-lg transition border border-slate-700" id="btn-Abarrotes">🌾 Abarrotes (4)</button>
+            <button onclick="filtrarCategoria('Limpieza')" class="btn-filter bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-lg transition border border-slate-700" id="btn-Limpieza">🧹 Limpieza (3)</button>
+            <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Imprimir Hoja
+            </button>
+        </div>
+    </header>
+
+    <!-- Grilla de Productos -->
+    <main class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="grid-productos">
+        <!-- Generado dinámicamente -->
+    </main>
+
+    <script>
+        const productos = [
+            { id: 1, codigo: "2010100000013", nombre: "Coca-Cola 600ml", precio: 1.25, costo: 0.85, stock: 50, categoria: "Bebidas", proveedor: "Distribuidora del Norte" },
+            { id: 2, codigo: "2010100000020", nombre: "Agua Ciel 1.5L", precio: 0.80, costo: 0.45, stock: 30, categoria: "Bebidas", proveedor: "Distribuidora del Norte" },
+            { id: 3, codigo: "2010100000037", nombre: "Jugo del Valle Naranja 1L", precio: 1.50, costo: 1.00, stock: 20, categoria: "Bebidas", proveedor: "Distribuidora del Norte" },
+            { id: 4, codigo: "2020200000011", nombre: "Arroz Extra 1kg", precio: 1.40, costo: 0.95, stock: 40, categoria: "Abarrotes", proveedor: "Comercializadora Central" },
+            { id: 5, codigo: "2020200000028", nombre: "Frijol Negro 1kg", precio: 1.75, costo: 1.20, stock: 3, categoria: "Abarrotes", proveedor: "Comercializadora Central" },
+            { id: 6, codigo: "2020200000035", nombre: "Aceite Vegetal 900ml", precio: 2.25, costo: 1.60, stock: 15, categoria: "Abarrotes", proveedor: "Comercializadora Central" },
+            { id: 7, codigo: "2020200000042", nombre: "Azúcar Estándar 1kg", precio: 1.50, costo: 1.10, stock: 25, categoria: "Abarrotes", proveedor: "Comercializadora Central" },
+            { id: 8, codigo: "2030100000011", nombre: "Detergente Multiusos 1kg", precio: 1.90, costo: 1.35, stock: 2, categoria: "Limpieza", proveedor: "Distribuidora del Norte" },
+            { id: 9, codigo: "2030100000028", nombre: "Jabón para Trastes 750ml", precio: 1.60, costo: 1.10, stock: 18, categoria: "Limpieza", proveedor: "Distribuidora del Norte" },
+            { id: 10, codigo: "2030100000035", nombre: "Cloro Limpiador 1L", precio: 0.85, costo: 0.50, stock: 22, categoria: "Limpieza", proveedor: "Distribuidora del Norte" }
+        ];
+
+        let categoriaActual = 'TODOS';
+
+        function renderizarProductos() {
+            const container = document.getElementById('grid-productos');
+            container.innerHTML = '';
+
+            const filtrados = categoriaActual === 'TODOS'
+                ? productos
+                : productos.filter(p => p.categoria === categoriaActual);
+
+            filtrados.forEach(prod => {
+                const stockBadgeClass = prod.stock <= 5
+                    ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+
+                const cardHtml = `
+                    <div class="card-item bg-slate-800 border border-slate-700/80 rounded-2xl p-5 flex flex-col justify-between shadow-lg hover:border-indigo-500/50 transition">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="bg-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-full font-medium">${prod.categoria}</span>
+                                <span class="text-xs px-2.5 py-1 rounded-full border font-semibold ${stockBadgeClass}">Stock: ${prod.stock}</span>
+                            </div>
+
+                            <h2 class="text-xl font-bold text-white mb-1">${prod.nombre}</h2>
+                            <p class="text-slate-400 text-xs mb-4">Prov: ${prod.proveedor}</p>
+
+                            <!-- Código de Barras EAN-13 Grande -->
+                            <div class="bg-white p-3 rounded-xl text-center shadow-inner flex flex-col items-center">
+                                <svg id="barcode-${prod.id}" class="w-full h-24"></svg>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-700/60 flex justify-between items-center">
+                            <div>
+                                <span class="text-slate-400 text-xs block">Precio Venta</span>
+                                <span class="text-2xl font-black text-indigo-400">$${prod.precio.toFixed(2)}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-slate-400 text-xs block">Formato Interno</span>
+                                <span class="text-slate-200 font-mono text-xs font-semibold">${formatearCodigo(prod.codigo)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+
+            // Generar Código de Barras EAN-13 con try/catch seguro
+            filtrados.forEach(prod => {
+                try {
+                    JsBarcode(`#barcode-${prod.id}`, prod.codigo, {
+                        format: "EAN13",
+                        height: 60,
+                        width: 2.2,
+                        fontSize: 14,
+                        margin: 5,
+                        displayValue: true
+                    });
+                } catch (e) {
+                    // Fallback automático si falla el checksum
+                    JsBarcode(`#barcode-${prod.id}`, prod.codigo, {
+                        format: "CODE128",
+                        height: 60,
+                        width: 2,
+                        fontSize: 14,
+                        margin: 5,
+                        displayValue: true
+                    });
+                }
+            });
+        }
+
+        function formatearCodigo(c) {
+            if (c.length === 13) {
+                return `${c.substring(0,1)} ${c.substring(1,3)} ${c.substring(3,5)} ${c.substring(5,12)} ${c.substring(12,13)}`;
+            }
+            return c;
+        }
+
+        function filtrarCategoria(cat) {
+            categoriaActual = cat;
+            document.querySelectorAll('.btn-filter').forEach(btn => {
+                btn.className = 'btn-filter bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-lg transition border border-slate-700';
+            });
+            const activeBtn = document.getElementById(`btn-${cat}`);
+            if (activeBtn) {
+                activeBtn.className = 'btn-filter bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition';
+            }
+            renderizarProductos();
+        }
+
+        window.onload = () => renderizarProductos();
+    </script>
+</body>
+</html>

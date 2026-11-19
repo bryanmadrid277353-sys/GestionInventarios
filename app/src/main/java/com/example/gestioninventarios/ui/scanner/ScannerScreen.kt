@@ -138,7 +138,7 @@ fun ScannerScreen(
                                 it.setSurfaceProvider(previewView.surfaceProvider)
                             }
 
-                            // Configurar escáner exclusivamente para EAN-13, EAN-8, UPC-A, UPC-E y Code 128
+                            // Configurar escáner exclusivamente para códigos de barras lineales (EAN-13, EAN-8, UPC-A, UPC-E, Code 128)
                             val options = BarcodeScannerOptions.Builder()
                                 .setBarcodeFormats(
                                     Barcode.FORMAT_EAN_13,

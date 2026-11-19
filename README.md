@@ -15,8 +15,6 @@
 | **Asignatura** | Técnicas de Producción Industrial de Software |
 | **Docente** | Ing. Carlos Roberto Monroy Alfaro |
 | **Ciclo / Sección** | 02-2026 · Sección 01 |
-| **Grupo** | N.º `__` |
-| **Integrantes** | `Nombre 1` · `Nombre 2` · `Nombre 3` · `Nombre 4` · `Nombre 5` · `Nombre 6` |
 
 ---
 
@@ -389,29 +387,11 @@ La app **no usa internet**.
 
 ---
 
-## 🎬 Guía para la exposición y el video (máx. 10 min)
-
-| Tiempo | Qué mostrar | Qué explicar |
-| :---: | :--- | :--- |
-| 0:00–0:45 | Pantalla de inicio de sesión | Problema, objetivo, misión y visión |
-| 0:45–1:45 | Android Studio y la app | **Entorno:** SDK mínimo (API 24), permisos, tecnologías |
-| 1:45–2:30 | Estructura del proyecto y diagrama ER | MVVM por capas y cómo se relacionan los datos |
-| 2:30–3:15 | Login como Admin y como Vendedor | Roles y diferencias en el menú |
-| 3:15–4:30 | Productos y catálogos | CRUD, filtros, validaciones, código interno y vista previa |
-| 4:30–6:30 | Punto de venta | Escáner, carrito, deshacer, confirmar y descuento de stock |
-| 6:30–7:15 | Historial y reportes | Cómo los datos de la venta alimentan los reportes |
-| 7:15–8:30 | **Ajustes**: tema y respaldos | Cambio de tema; exportar, importar (registros nuevos) y eliminar con espera de 3 s |
-| 8:30–9:15 | Cierre de sesión y **modo avión** | Sesión por inactividad, login sin datos guardados, funciona sin conexión |
-| 9:15–10:00 | Conclusiones | Aportes, limitaciones y mejoras futuras |
-
-> Para demostrar la **expiración de sesión** sin esperar 10 minutos, puedes mostrarlo en el código (constante de tiempo) o grabarlo con antelación.
-
 ### Mapa de la rúbrica
 
 | Criterio | Dónde se evidencia |
 | :--- | :--- |
 | Entorno de la aplicación Android | Secciones *Tecnologías*, *Permisos* e *Instalación*; minuto 0:45 del video |
-| Presentación en video | Guion anterior, con demostración de cada módulo |
 | Funcionalidad del proyecto | Reglas de negocio, roles, escáner, reportes, respaldos y validaciones adicionales |
 | Contenido del documento | Este README, diagrama ER, capturas por módulo y manual de usuario |
 | Bonificación (uso creativo) | Código de barras EAN-13 interno, respaldos verificados, importación sin pérdida de datos, sesión por inactividad y tema claro/oscuro |
@@ -439,12 +419,6 @@ La app **no usa internet**.
 - Sincronización con la nube y panel web (arquitectura cliente-servidor).
 - Soporte multisucursal, descuentos y promociones.
 - Pruebas instrumentadas de interfaz.
-
----
-
-## 📦 Entregables
-
-`Grupo##_INVENTARIO.zip` con: documento del proyecto · manual de usuario · video demostración (máx. 10 min) · código fuente · presentación PPT.
 
 ---
 

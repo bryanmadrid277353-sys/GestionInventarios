@@ -187,10 +187,10 @@ abstract class AppDatabase : RoomDatabase() {
                                 ProductoEntity(1, "2010100000013", "Coca-Cola 600ml", 1.25, 0.85, 50, 10, 1, 1, true, "Bebidas", "Distribuidora del Norte"),
                                 ProductoEntity(2, "2010100000020", "Agua Ciel 1.5L", 0.80, 0.45, 30, 10, 1, 1, true, "Bebidas", "Distribuidora del Norte"),
                                 ProductoEntity(3, "2010100000037", "Jugo del Valle Naranja 1L", 1.50, 1.00, 20, 5, 1, 1, true, "Bebidas", "Distribuidora del Norte"),
-                                ProductoEntity(4, "2020200000016", "Arroz Extra 1kg", 1.40, 0.95, 40, 10, 2, 2, true, "Abarrotes", "Comercializadora Central"),
-                                ProductoEntity(5, "2020200000023", "Frijol Negro 1kg", 1.75, 1.20, 3, 10, 2, 2, true, "Abarrotes", "Comercializadora Central"),
-                                ProductoEntity(6, "2020200000030", "Aceite Vegetal 900ml", 2.25, 1.60, 15, 5, 2, 2, true, "Abarrotes", "Comercializadora Central"),
-                                ProductoEntity(7, "2020200000047", "Azúcar Estándar 1kg", 1.50, 1.10, 25, 5, 2, 2, true, "Abarrotes", "Comercializadora Central"),
+                                ProductoEntity(4, "2020200000011", "Arroz Extra 1kg", 1.40, 0.95, 40, 10, 2, 2, true, "Abarrotes", "Comercializadora Central"),
+                                ProductoEntity(5, "2020200000028", "Frijol Negro 1kg", 1.75, 1.20, 3, 10, 2, 2, true, "Abarrotes", "Comercializadora Central"),
+                                ProductoEntity(6, "2020200000035", "Aceite Vegetal 900ml", 2.25, 1.60, 15, 5, 2, 2, true, "Abarrotes", "Comercializadora Central"),
+                                ProductoEntity(7, "2020200000042", "Azúcar Estándar 1kg", 1.50, 1.10, 25, 5, 2, 2, true, "Abarrotes", "Comercializadora Central"),
                                 ProductoEntity(8, "2030100000011", "Detergente Multiusos 1kg", 1.90, 1.35, 2, 8, 3, 1, true, "Limpieza", "Distribuidora del Norte"),
                                 ProductoEntity(9, "2030100000028", "Jabón para Trastes 750ml", 1.60, 1.10, 18, 5, 3, 1, true, "Limpieza", "Distribuidora del Norte"),
                                 ProductoEntity(10, "2030100000035", "Cloro Limpiador 1L", 0.85, 0.50, 22, 5, 3, 1, true, "Limpieza", "Distribuidora del Norte")
@@ -231,8 +231,8 @@ abstract class AppDatabase : RoomDatabase() {
 
                         vtaDao.insertDetalles(
                             listOf(
-                                DetalleVentaEntity(id = 3, ventaId = vtaId2, productoId = 4, productoNombre = "Arroz Extra 1kg", codigoBarras = "2020200000016", cantidad = 1, precioUnitario = 1.40, subtotal = 1.40),
-                                DetalleVentaEntity(id = 4, ventaId = vtaId2, productoId = 6, productoNombre = "Aceite Vegetal 900ml", codigoBarras = "2020200000030", cantidad = 1, precioUnitario = 2.25, subtotal = 2.25),
+                                DetalleVentaEntity(id = 3, ventaId = vtaId2, productoId = 4, productoNombre = "Arroz Extra 1kg", codigoBarras = "2020200000011", cantidad = 1, precioUnitario = 1.40, subtotal = 1.40),
+                                DetalleVentaEntity(id = 4, ventaId = vtaId2, productoId = 6, productoNombre = "Aceite Vegetal 900ml", codigoBarras = "2020200000035", cantidad = 1, precioUnitario = 2.25, subtotal = 2.25),
                                 DetalleVentaEntity(id = 5, ventaId = vtaId2, productoId = 10, productoNombre = "Cloro Limpiador 1L", codigoBarras = "2030100000035", cantidad = 1, precioUnitario = 0.85, subtotal = 0.85)
                             )
                         )
