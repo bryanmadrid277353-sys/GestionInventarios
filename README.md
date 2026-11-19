@@ -6,6 +6,49 @@
 
 ---
 
+## 📚 Documentación
+
+La **documentación técnica completa** de la aplicación (clases, métodos, procesos y gestión de datos) vive en la carpeta [`docs/`](docs/).
+
+| Documento | Descripción |
+| :--- | :--- |
+| 📖 [**Documentación técnica**](docs/DOCUMENTACION_TECNICA.md) | Archivo maestro: portada, **índice general** y enlaces a cada capítulo |
+| 📂 [Capítulos](docs/capitulos/) | Un archivo por tema, numerados `1, 2, 3…` con secciones `a, b, c…` |
+
+### Contenido de la documentación técnica
+
+| N.º | Capítulo | Qué encontrarás |
+| :---: | :--- | :--- |
+| 1 | Visión general y entorno | Requisitos, versiones de SDK, permisos, dependencias, cómo compilar y ejecutar |
+| 2 | Arquitectura | MVVM por capas, flujo de datos y eventos, navegación |
+| 3 | Base de datos | Entidades, DAOs, consultas SQL, relaciones, migraciones y sembrado de datos |
+| 4 | Repositorio y reglas de negocio | Cada método, validaciones, errores y efectos sobre los datos |
+| 5 | Seguridad, sesión y roles | Autenticación, hash, permisos por rol, expiración por inactividad |
+| 6 | Punto de Venta | Carrito, venta transaccional, historial y filtros |
+| 7 | Productos | Filtros, formulario, validaciones y generación del código EAN-13 interno |
+| 8 | Catálogos | Categorías, proveedores y sus códigos internos |
+| 9 | Escáner de códigos de barras | CameraX, ML Kit, formatos y permisos |
+| 10 | Reportes | Rangos de fechas, zonas horarias, consultas, gráfico y Top 5 |
+| 11 | Usuarios y Ajustes | Gestión de usuarios, tema y ajustes avanzados |
+| 12 | Respaldos y gestión de datos | Formato JSON, exportación, importación, eliminación total y carpetas |
+| 13 | Interfaz de usuario | Tema, componentes reutilizables, insets y mensajes |
+| 14 | Ciclo de vida de los datos | Dónde nace, se guarda y se respalda cada dato |
+| 15 | Pruebas | Qué se prueba y cómo ejecutarlo |
+| 16 | Decisiones, limitaciones y observaciones | El porqué del diseño y puntos por verificar |
+| 17 | Apéndices | Archivo → clase → capítulo, permisos, constantes y glosario |
+
+> El **índice del archivo maestro** es la referencia definitiva: los capítulos pueden variar según lo que exista en el código.
+
+**Cómo leerla.** Cada capítulo se numera `1, 2, 3…` y sus secciones con letras `a, b, c…` (por ejemplo, `5.b`). Los diagramas están en Mermaid y se ven directamente en GitHub; en Android Studio se activan en *Settings → Languages & Frameworks → Markdown*.
+
+**Versión HTML o Word (opcional, requiere `pandoc`):**
+```bash
+pandoc docs/DOCUMENTACION_TECNICA.md docs/capitulos/*.md -s --toc --toc-depth=3 -o DOCUMENTACION_TECNICA.html
+pandoc docs/DOCUMENTACION_TECNICA.md docs/capitulos/*.md --toc --toc-depth=3 -o DOCUMENTACION_TECNICA.docx
+```
+
+---
+
 ## 📌 Datos del proyecto
 
 | | |
@@ -261,6 +304,10 @@ app/src/main/java/com/utec/inventario/
 │   ├── components/     Elementos reutilizables (tarjetas, chips, diálogos, AppScaffold)
 │   └── login · home · venta · productos · maestros · reportes · usuarios · scanner · ajustes
 └── util/               Validaciones, hash, código de barras interno, rangos de fechas, sesión
+
+docs/
+├── DOCUMENTACION_TECNICA.md    Índice general de la documentación técnica
+└── capitulos/                  Un archivo por capítulo (1, 2, 3…)
 ```
 
 ### Modelo de datos
@@ -391,9 +438,9 @@ La app **no usa internet**.
 
 | Criterio | Dónde se evidencia |
 | :--- | :--- |
-| Entorno de la aplicación Android | Secciones *Tecnologías*, *Permisos* e *Instalación*; minuto 0:45 del video |
+| Entorno de la aplicación Android | Secciones *Tecnologías*, *Permisos* e *Instalación*; capítulo 1 de la [documentación técnica](docs/DOCUMENTACION_TECNICA.md); minuto 0:45 del video |
 | Funcionalidad del proyecto | Reglas de negocio, roles, escáner, reportes, respaldos y validaciones adicionales |
-| Contenido del documento | Este README, diagrama ER, capturas por módulo y manual de usuario |
+| Contenido del documento | Este README, la [documentación técnica](docs/DOCUMENTACION_TECNICA.md), diagrama ER, capturas por módulo y manual de usuario |
 | Bonificación (uso creativo) | Código de barras EAN-13 interno, respaldos verificados, importación sin pérdida de datos, sesión por inactividad y tema claro/oscuro |
 
 ### Preguntas frecuentes de la defensa
